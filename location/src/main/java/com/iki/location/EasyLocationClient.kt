@@ -129,12 +129,23 @@ class EasyLocationClient(activity: Activity) {
     private fun checkAndRequestPermission(activity: Activity) {
         Log.d(TAG, "[EasyLocation] Step 1: 检查定位权限")
         
-        if (locationManager.hasLocationPermission()) {
-            Log.d(TAG, "[EasyLocation] 已有定位权限")
-            // 检查是否满足精确定位要求
-            if (!checkFineLocationRequirement()) {
+        // 如果需要精确定位，检查是否已有精确权限
+        if (requireFineLocation) {
+            if (locationManager.hasFineLocationPermission()) {
+                Log.d(TAG, "[EasyLocation] 已有精确定位权限")
+                checkGmsAccuracy(activity)
                 return
             }
+            
+            // 没有精确权限，需要申请
+            Log.d(TAG, "[EasyLocation] 需要精确定位权限，开始申请...")
+            requestFineLocationPermission(activity)
+            return
+        }
+        
+        // 不要求精确定位，只需要任意定位权限
+        if (locationManager.hasLocationPermission()) {
+            Log.d(TAG, "[EasyLocation] 已有定位权限")
             checkGmsAccuracy(activity)
             return
         }
@@ -143,11 +154,6 @@ class EasyLocationClient(activity: Activity) {
         locationManager.requestLocationPermission(activity, object : PermissionCallback {
             override fun onPermissionGranted(permissions: List<String>) {
                 Log.d(TAG, "[EasyLocation] ✅ 权限已授予: $permissions")
-                
-                // 检查是否满足精确定位要求
-                if (!checkFineLocationRequirement()) {
-                    return
-                }
                 
                 val act = activityRef.get()
                 if (act != null && !act.isFinishing && !act.isDestroyed) {
@@ -165,17 +171,54 @@ class EasyLocationClient(activity: Activity) {
     }
     
     /**
-     * 检查是否满足精确定位权限要求
+     * 申请精确定位权限
      * 
-     * @return true 满足要求，可以继续；false 不满足要求，已触发错误回调
+     * 处理以下情况：
+     * 1. 用户之前没有任何权限 -> 正常弹窗
+     * 2. 用户之前只授予了模糊权限 -> 尝试弹窗，如果不弹窗则引导去设置
      */
-    private fun checkFineLocationRequirement(): Boolean {
-        if (requireFineLocation && !locationManager.hasFineLocationPermission()) {
-            Log.e(TAG, "[EasyLocation] ❌ 要求精确定位但用户只授予了模糊定位权限")
-            finishWithError(EasyLocationError.FineLocationRequired)
-            return false
+    private fun requestFineLocationPermission(activity: Activity) {
+        // 检查是否已有模糊权限（说明用户之前选择了模糊定位）
+        val hasCoarseOnly = locationManager.hasLocationPermission() && 
+                            !locationManager.hasFineLocationPermission()
+        
+        if (hasCoarseOnly) {
+            Log.d(TAG, "[EasyLocation] 用户已有模糊权限，尝试申请精确权限...")
         }
-        return true
+        
+        locationManager.requestLocationPermission(activity, object : PermissionCallback {
+            override fun onPermissionGranted(permissions: List<String>) {
+                Log.d(TAG, "[EasyLocation] ✅ 权限已授予: $permissions")
+                
+                // 再次检查是否获得了精确权限
+                if (locationManager.hasFineLocationPermission()) {
+                    Log.d(TAG, "[EasyLocation] ✅ 已获得精确定位权限")
+                    val act = activityRef.get()
+                    if (act != null && !act.isFinishing && !act.isDestroyed) {
+                        checkGmsAccuracy(act)
+                    } else {
+                        finishWithError(EasyLocationError.ActivityDestroyed)
+                    }
+                } else {
+                    // 授予了权限但不是精确权限（用户选择了模糊）
+                    Log.e(TAG, "[EasyLocation] ❌ 用户选择了模糊定位，需要精确定位")
+                    finishWithError(EasyLocationError.FineLocationRequired)
+                }
+            }
+            
+            override fun onPermissionDenied(deniedPermissions: List<String>, permanentlyDenied: Boolean) {
+                Log.e(TAG, "[EasyLocation] ❌ 权限被拒绝: $deniedPermissions")
+                
+                // 如果之前已有模糊权限，但系统没有弹窗让用户选择精确权限
+                // 这种情况下需要引导用户去设置
+                if (hasCoarseOnly && locationManager.hasLocationPermission()) {
+                    Log.e(TAG, "[EasyLocation] ❌ 用户已有模糊权限，需要去设置中修改为精确权限")
+                    finishWithError(EasyLocationError.FineLocationRequired)
+                } else {
+                    finishWithError(EasyLocationError.PermissionDenied(permanentlyDenied))
+                }
+            }
+        })
     }
     
     /**

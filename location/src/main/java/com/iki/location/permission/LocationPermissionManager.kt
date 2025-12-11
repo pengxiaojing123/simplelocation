@@ -105,6 +105,9 @@ class LocationPermissionManager private constructor(private val context: Context
     /**
      * 请求定位权限
      * 
+     * 注意：即使已有部分权限也会发起请求，让系统决定是否弹窗。
+     * 这样可以处理"用户已有模糊权限，但需要精确权限"的场景。
+     * 
      * @param activity Activity 实例
      * @param callback 权限回调
      */
@@ -116,12 +119,9 @@ class LocationPermissionManager private constructor(private val context: Context
         
         val permissions = getLocationPermissions()
         
-        if (hasLocationPermission()) {
-            callback.onPermissionGranted(permissions.filter { hasPermission(it) })
-            return
-        }
-        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            // 总是请求权限，让系统决定是否弹窗
+            // Android 12+ 如果用户已选择模糊定位，可能不会弹窗
             activity.requestPermissions(permissions, REQUEST_CODE_LOCATION)
         } else {
             // Android 6.0 以下默认有权限
