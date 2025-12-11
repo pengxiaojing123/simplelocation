@@ -11,6 +11,9 @@ import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.graphics.Color
 import android.util.TypedValue
 import com.iki.location.SimpleLocationManager
+import com.iki.location.EasyLocationClient
+import com.iki.location.EasyLocationCallback
+import com.iki.location.EasyLocationError
 import com.iki.location.callback.PermissionCallback
 import com.iki.location.callback.SingleLocationCallback
 import com.iki.location.model.LocationData
@@ -29,6 +32,7 @@ class LocationTestActivity : Activity(), CoroutineScope {
     override val coroutineContext get() = Dispatchers.Main + job
     
     private lateinit var locationManager: SimpleLocationManager
+    private lateinit var easyClient: EasyLocationClient
     private lateinit var logTextView: TextView
     private lateinit var statusTextView: TextView
     
@@ -36,6 +40,7 @@ class LocationTestActivity : Activity(), CoroutineScope {
         super.onCreate(savedInstanceState)
         
         locationManager = SimpleLocationManager.getInstance(this)
+        easyClient = EasyLocationClient(this)
         
         // 创建 UI
         val root = LinearLayout(this).apply {
@@ -57,6 +62,11 @@ class LocationTestActivity : Activity(), CoroutineScope {
             setPadding(0, 16, 0, 16)
         }
         root.addView(statusTextView)
+        
+        // ⭐ 一键定位（EasyLocationClient）
+        root.addView(createButton("⭐ 一键定位 (EasyLocationClient)") {
+            easyGetLocation()
+        })
         
         // 按钮1: 请求权限
         root.addView(createButton("1️⃣ 请求定位权限") {
@@ -208,6 +218,42 @@ class LocationTestActivity : Activity(), CoroutineScope {
         }
     }
     
+    /**
+     * ⭐ 一键定位 - 使用 EasyLocationClient
+     * 自动处理：权限申请 → GMS 精确定位开关 → 定位
+     */
+    private fun easyGetLocation() {
+        val startTime = System.currentTimeMillis()
+        log("⭐ 开始一键定位 (EasyLocationClient)...")
+        log("   自动处理：权限 → GMS开关 → 定位")
+        
+        easyClient.getLocation(object : EasyLocationCallback {
+            override fun onSuccess(location: LocationData) {
+                val costTime = System.currentTimeMillis() - startTime
+                log("✅ 一键定位成功! 耗时: ${costTime}ms")
+                log("   来源: ${location.provider}")
+                log("   经度: ${location.longitude}")
+                log("   纬度: ${location.latitude}")
+                log("   精度: ${location.accuracy}m")
+                val timeStr = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                    .format(Date(location.timestamp))
+                log("   时间: $timeStr")
+                updateStatus()
+            }
+            
+            override fun onError(error: EasyLocationError) {
+                val costTime = System.currentTimeMillis() - startTime
+                log("❌ 一键定位失败! 耗时: ${costTime}ms")
+                log("   错误码: ${error.code}")
+                log("   错误: ${error.message}")
+                if (error.canResolveInSettings) {
+                    log("   💡 可通过设置解决")
+                }
+                updateStatus()
+            }
+        })
+    }
+    
     private fun log(message: String) {
         val time = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(Date())
         runOnUiThread {
@@ -222,10 +268,17 @@ class LocationTestActivity : Activity(), CoroutineScope {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         locationManager.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        easyClient.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    }
+    
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        easyClient.onActivityResult(requestCode, resultCode, data)
     }
     
     override fun onDestroy() {
         super.onDestroy()
+        easyClient.destroy()
         job.cancel()
     }
 }

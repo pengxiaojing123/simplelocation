@@ -7,3 +7,4 @@
 # Keep GMS location classes
 -keep class com.google.android.gms.location.** { *; }
 
+
