@@ -52,7 +52,7 @@ class SimpleLocationManager private constructor(
 ) : CoroutineScope {
     
     companion object {
-        private const val TAG = "SimpleLocationManager"
+        private const val TAG = "mylocation"
         const val REQUEST_CHECK_SETTINGS = 10010
         
         @Volatile
@@ -293,40 +293,62 @@ class SimpleLocationManager private constructor(
     private suspend fun getLocationInternal(
         request: LocationRequest
     ): Result<LocationData> {
+        Log.d(TAG, "========== 开始定位 ==========")
+        Log.d(TAG, "定位配置: priority=${request.priority}, timeout=${request.timeoutMillis}ms, interval=${request.intervalMillis}ms")
+        
+        val startTime = System.currentTimeMillis()
+        
         // 首先尝试 GMS 定位
         if (isGmsAvailable()) {
-            Log.d(TAG, "Trying GMS location...")
+            Log.d(TAG, "[GMS] GMS可用，开始GMS定位...")
             
             // 检查 Google Location Accuracy 开关
             val isAccuracyEnabled = isGoogleLocationAccuracyEnabled()
+            Log.d(TAG, "[GMS] Google Location Accuracy开关: ${if (isAccuracyEnabled) "已开启" else "未开启"}")
             if (!isAccuracyEnabled) {
-                Log.w(TAG, "Google Location Accuracy is disabled, location accuracy may be reduced")
+                Log.w(TAG, "[GMS] ⚠️ Google Location Accuracy未开启，精度可能降低")
             }
             
+            Log.d(TAG, "[GMS] 调用 gmsProvider.getLocation()...")
+            val gmsStartTime = System.currentTimeMillis()
             val gmsResult = gmsProvider.getLocation(request)
+            val gmsCostTime = System.currentTimeMillis() - gmsStartTime
+            
             if (gmsResult.isSuccess) {
-                Log.d(TAG, "GMS location success")
+                val location = gmsResult.getOrNull()
+                Log.d(TAG, "[GMS] ✅ GMS定位成功! 耗时: ${gmsCostTime}ms")
+                Log.d(TAG, "[GMS] 位置: lat=${location?.latitude}, lng=${location?.longitude}, accuracy=${location?.accuracy}m")
                 notifyProviderSwitch(currentProvider, "GMS", "GMS location success")
                 currentProvider = "GMS"
                 return gmsResult
             }
             
-            Log.w(TAG, "GMS location failed: ${gmsResult.exceptionOrNull()?.message}")
+            Log.w(TAG, "[GMS] ❌ GMS定位失败! 耗时: ${gmsCostTime}ms, 错误: ${gmsResult.exceptionOrNull()?.message}")
+            Log.w(TAG, "[GMS] 异常详情: ${gmsResult.exceptionOrNull()}")
         } else {
-            Log.d(TAG, "GMS not available, using GPS directly")
+            Log.d(TAG, "[GMS] GMS不可用 (errorCode=${gmsProvider.getGmsAvailabilityErrorCode()})，直接使用GPS")
         }
         
         // GMS 失败或不可用，尝试 GPS 定位
-        Log.d(TAG, "Trying GPS location...")
+        Log.d(TAG, "[GPS] 开始GPS定位 (GMS回退)...")
+        Log.d(TAG, "[GPS] GPS开启: ${gpsProvider.isGpsEnabled()}, 网络定位开启: ${gpsProvider.isNetworkLocationEnabled()}")
+        
+        val gpsStartTime = System.currentTimeMillis()
         val gpsResult = gpsProvider.getLocation(request)
+        val gpsCostTime = System.currentTimeMillis() - gpsStartTime
         
         if (gpsResult.isSuccess) {
-            Log.d(TAG, "GPS location success")
+            val location = gpsResult.getOrNull()
+            Log.d(TAG, "[GPS] ✅ GPS定位成功! 耗时: ${gpsCostTime}ms")
+            Log.d(TAG, "[GPS] 位置: lat=${location?.latitude}, lng=${location?.longitude}, accuracy=${location?.accuracy}m")
             notifyProviderSwitch(currentProvider, "GPS", "Fallback to GPS")
             currentProvider = "GPS"
         } else {
-            Log.e(TAG, "GPS location also failed: ${gpsResult.exceptionOrNull()?.message}")
+            Log.e(TAG, "[GPS] ❌ GPS定位也失败! 耗时: ${gpsCostTime}ms, 错误: ${gpsResult.exceptionOrNull()?.message}")
         }
+        
+        val totalTime = System.currentTimeMillis() - startTime
+        Log.d(TAG, "========== 定位结束 (总耗时: ${totalTime}ms) ==========")
         
         return gpsResult
     }
