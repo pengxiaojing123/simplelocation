@@ -165,7 +165,11 @@ class EasyLocationClient(activity: Activity) {
             
             override fun onPermissionDenied(deniedPermissions: List<String>, permanentlyDenied: Boolean) {
                 Log.e(TAG, "[EasyLocation] ❌ 权限被拒绝: $deniedPermissions, 永久拒绝: $permanentlyDenied")
-                finishWithError(EasyLocationError.PermissionDenied(permanentlyDenied))
+                if (permanentlyDenied) {
+                    finishWithError(EasyLocationError.PermissionPermanentlyDenied)
+                } else {
+                    finishWithError(EasyLocationError.PermissionDenied)
+                }
             }
         })
     }
@@ -207,15 +211,17 @@ class EasyLocationClient(activity: Activity) {
             }
             
             override fun onPermissionDenied(deniedPermissions: List<String>, permanentlyDenied: Boolean) {
-                Log.e(TAG, "[EasyLocation] ❌ 权限被拒绝: $deniedPermissions")
+                Log.e(TAG, "[EasyLocation] ❌ 权限被拒绝: $deniedPermissions, 永久拒绝: $permanentlyDenied")
                 
                 // 如果之前已有模糊权限，但系统没有弹窗让用户选择精确权限
                 // 这种情况下需要引导用户去设置
                 if (hasCoarseOnly && locationManager.hasLocationPermission()) {
                     Log.e(TAG, "[EasyLocation] ❌ 用户已有模糊权限，需要去设置中修改为精确权限")
                     finishWithError(EasyLocationError.FineLocationRequired)
+                } else if (permanentlyDenied) {
+                    finishWithError(EasyLocationError.PermissionPermanentlyDenied)
                 } else {
-                    finishWithError(EasyLocationError.PermissionDenied(permanentlyDenied))
+                    finishWithError(EasyLocationError.PermissionDenied)
                 }
             }
         })
@@ -260,7 +266,7 @@ class EasyLocationClient(activity: Activity) {
                 
                 is SimpleLocationManager.LocationSettingsResult.PermissionRequired -> {
                     Log.e(TAG, "[EasyLocation] ❌ 需要权限（不应该到达这里）")
-                    finishWithError(EasyLocationError.PermissionDenied(false))
+                    finishWithError(EasyLocationError.PermissionDenied)
                 }
                 
                 is SimpleLocationManager.LocationSettingsResult.LocationDisabled -> {
@@ -404,12 +410,13 @@ interface EasyLocationCallback {
  */
 sealed class EasyLocationError(val message: String, val code: Int) {
     
-    /** 权限被拒绝（用户拒绝所有定位权限） */
-    class PermissionDenied(val permanentlyDenied: Boolean) : 
-        EasyLocationError(
-            if (permanentlyDenied) "权限被永久拒绝，请到设置中开启" else "定位权限被拒绝",
-            CODE_PERMISSION_DENIED
-        )
+    /** 权限被拒绝（用户本次拒绝，可以再次申请） */
+    object PermissionDenied : 
+        EasyLocationError("定位权限被拒绝", CODE_PERMISSION_DENIED)
+    
+    /** 权限被永久拒绝（用户选择了"不再询问"，需要去设置中开启） */
+    object PermissionPermanentlyDenied : 
+        EasyLocationError("定位权限被永久拒绝，请到设置中开启", CODE_PERMISSION_PERMANENTLY_DENIED)
     
     /** 要求精确定位但用户只授予了模糊定位 */
     object FineLocationRequired : 
@@ -437,12 +444,13 @@ sealed class EasyLocationError(val message: String, val code: Int) {
     
     companion object {
         const val CODE_PERMISSION_DENIED = 2001
-        const val CODE_FINE_LOCATION_REQUIRED = 2002
-        const val CODE_GMS_ACCURACY_DENIED = 2003
-        const val CODE_LOCATION_DISABLED = 2004
-        const val CODE_LOCATION_FAILED = 2005
-        const val CODE_ACTIVITY_DESTROYED = 2006
-        const val CODE_ALREADY_PROCESSING = 2007
+        const val CODE_PERMISSION_PERMANENTLY_DENIED = 2002
+        const val CODE_FINE_LOCATION_REQUIRED = 2003
+        const val CODE_GMS_ACCURACY_DENIED = 2004
+        const val CODE_LOCATION_DISABLED = 2005
+        const val CODE_LOCATION_FAILED = 2006
+        const val CODE_ACTIVITY_DESTROYED = 2007
+        const val CODE_ALREADY_PROCESSING = 2008
     }
     
     /**
@@ -450,7 +458,7 @@ sealed class EasyLocationError(val message: String, val code: Int) {
      */
     val canResolveInSettings: Boolean
         get() = when (this) {
-            is PermissionDenied -> permanentlyDenied
+            is PermissionPermanentlyDenied -> true
             is FineLocationRequired -> true  // 可以到设置中改为精确定位
             is GmsAccuracyDenied -> true
             is LocationDisabled -> true

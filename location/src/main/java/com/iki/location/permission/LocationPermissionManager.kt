@@ -116,6 +116,7 @@ class LocationPermissionManager private constructor(private val context: Context
         callback: PermissionCallback
     ) {
         this.permissionCallback = callback
+        this.activityRef = java.lang.ref.WeakReference(activity)
         
         val permissions = getLocationPermissions()
         
@@ -128,6 +129,9 @@ class LocationPermissionManager private constructor(private val context: Context
             callback.onPermissionGranted(permissions.toList())
         }
     }
+    
+    // 保存 Activity 引用用于检测永久拒绝
+    private var activityRef: java.lang.ref.WeakReference<Activity>? = null
     
     /**
      * 处理权限请求结果
@@ -162,7 +166,17 @@ class LocationPermissionManager private constructor(private val context: Context
             }) {
                 permissionCallback?.onPermissionGranted(granted)
             } else {
-                permissionCallback?.onPermissionDenied(denied, false)
+                // 检测是否是永久拒绝
+                val activity = activityRef?.get()
+                val permanentlyDenied = if (activity != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    // 如果所有定位权限都不显示 rationale，说明是永久拒绝
+                    !activity.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION) &&
+                    !activity.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)
+                } else {
+                    false
+                }
+                
+                permissionCallback?.onPermissionDenied(denied, permanentlyDenied)
             }
         }
     }

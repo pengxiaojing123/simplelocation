@@ -208,11 +208,11 @@ public class LocationTestActivity extends AppCompatActivity {
     }
 
     private void handleError(EasyLocationError error) {
-        if (error instanceof EasyLocationError.PermissionDenied) {
-            EasyLocationError.PermissionDenied permError = (EasyLocationError.PermissionDenied) error;
-            if (permError.getPermanentlyDenied()) {
-                addLogError("   💡 提示: 权限被永久拒绝，请到设置中开启");
-            }
+        if (error instanceof EasyLocationError.PermissionPermanentlyDenied) {
+            addLogError("   💡 提示: 权限被永久拒绝，请到设置中开启");
+            addLogError("   💡 点击「应用设置」按钮前往开启");
+        } else if (error instanceof EasyLocationError.PermissionDenied) {
+            addLogError("   💡 提示: 权限被拒绝，请重试并授予权限");
         } else if (error instanceof EasyLocationError.FineLocationRequired) {
             addLogError("   💡 提示: 用户只授予了模糊定位，但此操作需要精确定位权限");
             addLogError("   💡 请到设置中将定位权限改为「精确」");
