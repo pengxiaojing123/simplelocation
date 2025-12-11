@@ -108,9 +108,8 @@ public class LocationTestActivity extends AppCompatActivity {
             addLog("   自动处理: 权限申请 → GMS精确定位检测 → 定位");
 
             LocationRequest request = new LocationRequest(
-                10000L, 5000L,
                 LocationRequest.Priority.HIGH_ACCURACY,
-                15000L, 0f, false
+                15000L
             );
 
             easyLocationClient.getLocation(request, new EasyLocationCallback() {
@@ -205,9 +204,8 @@ public class LocationTestActivity extends AppCompatActivity {
             addLog("开始单次定位...");
 
             LocationRequest request = new LocationRequest(
-                10000L, 5000L,
                 LocationRequest.Priority.HIGH_ACCURACY,
-                15000L, 0f, false
+                15000L
             );
 
             locationManager.getLocation(request, new SingleLocationCallback() {
@@ -318,7 +316,7 @@ public class LocationTestActivity extends AppCompatActivity {
                 Object result = BuildersKt.runBlocking(
                     EmptyCoroutineContext.INSTANCE,
                     (scope, continuation) -> locationManager.checkLocationSettings(
-                        new LocationRequest(10000L, 5000L, LocationRequest.Priority.HIGH_ACCURACY, 15000L, 0f, false),
+                        new LocationRequest(LocationRequest.Priority.HIGH_ACCURACY, 15000L),
                         continuation
                     )
                 );
@@ -394,7 +392,7 @@ public class LocationTestActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        locationManager.stopLocationUpdates();
+        locationManager.cancel();
         easyLocationClient.destroy();
     }
 }

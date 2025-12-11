@@ -15,15 +15,12 @@ import com.iki.location.callback.PermissionCallback
  * 
  * 处理 Android 各版本的定位权限申请：
  * - Android 6.0 (API 23): 引入运行时权限
- * - Android 10 (API 29): 引入 ACCESS_BACKGROUND_LOCATION 权限
- * - Android 11 (API 30): 后台定位权限需要单独申请
  * - Android 12 (API 31): 可以只申请粗略定位权限
  */
 class LocationPermissionManager private constructor(private val context: Context) {
     
     companion object {
         const val REQUEST_CODE_LOCATION = 10001
-        const val REQUEST_CODE_BACKGROUND_LOCATION = 10002
         
         private var instance: LocationPermissionManager? = null
         
@@ -39,11 +36,9 @@ class LocationPermissionManager private constructor(private val context: Context
     private var permissionCallback: PermissionCallback? = null
     
     /**
-     * 获取需要申请的前台定位权限列表
-     * 
-     * Android 12+ 可以只申请粗略定位，但为了最佳精度，建议同时申请精确定位
+     * 获取需要申请的定位权限列表
      */
-    fun getForegroundLocationPermissions(): Array<String> {
+    fun getLocationPermissions(): Array<String> {
         return arrayOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION
@@ -51,21 +46,9 @@ class LocationPermissionManager private constructor(private val context: Context
     }
     
     /**
-     * 获取后台定位权限
-     * 仅 Android 10 及以上版本需要
+     * 检查是否有定位权限
      */
-    fun getBackgroundLocationPermission(): String? {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            Manifest.permission.ACCESS_BACKGROUND_LOCATION
-        } else {
-            null
-        }
-    }
-    
-    /**
-     * 检查是否有前台定位权限
-     */
-    fun hasForegroundLocationPermission(): Boolean {
+    fun hasLocationPermission(): Boolean {
         return hasPermission(Manifest.permission.ACCESS_FINE_LOCATION) ||
                 hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
     }
@@ -82,18 +65,6 @@ class LocationPermissionManager private constructor(private val context: Context
      */
     fun hasCoarseLocationPermission(): Boolean {
         return hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
-    }
-    
-    /**
-     * 检查是否有后台定位权限
-     */
-    fun hasBackgroundLocationPermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            hasPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-        } else {
-            // Android 10 以下不需要单独的后台定位权限
-            hasForegroundLocationPermission()
-        }
     }
     
     /**
@@ -132,20 +103,20 @@ class LocationPermissionManager private constructor(private val context: Context
     }
     
     /**
-     * 请求前台定位权限
+     * 请求定位权限
      * 
      * @param activity Activity 实例
      * @param callback 权限回调
      */
-    fun requestForegroundLocationPermission(
+    fun requestLocationPermission(
         activity: Activity,
         callback: PermissionCallback
     ) {
         this.permissionCallback = callback
         
-        val permissions = getForegroundLocationPermissions()
+        val permissions = getLocationPermissions()
         
-        if (hasForegroundLocationPermission()) {
+        if (hasLocationPermission()) {
             callback.onPermissionGranted(permissions.filter { hasPermission(it) })
             return
         }
@@ -159,89 +130,31 @@ class LocationPermissionManager private constructor(private val context: Context
     }
     
     /**
-     * 请求后台定位权限
-     * 
-     * 注意: Android 11+ 需要先获取前台权限，再单独申请后台权限
-     * 
-     * @param activity Activity 实例
-     * @param callback 权限回调
-     */
-    fun requestBackgroundLocationPermission(
-        activity: Activity,
-        callback: PermissionCallback
-    ) {
-        this.permissionCallback = callback
-        
-        // Android 10 以下不需要后台定位权限
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            if (hasForegroundLocationPermission()) {
-                callback.onPermissionGranted(listOf("BACKGROUND_LOCATION_NOT_REQUIRED"))
-            } else {
-                callback.onPermissionDenied(listOf("FOREGROUND_LOCATION_REQUIRED"), false)
-            }
-            return
-        }
-        
-        // 检查是否已有后台权限
-        if (hasBackgroundLocationPermission()) {
-            callback.onPermissionGranted(listOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION))
-            return
-        }
-        
-        // 必须先有前台权限
-        if (!hasForegroundLocationPermission()) {
-            callback.onPermissionDenied(
-                listOf("FOREGROUND_LOCATION_REQUIRED"),
-                false
-            )
-            return
-        }
-        
-        // Android 11+ 需要引导用户到设置页面
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Android 11+ 无法通过代码直接请求后台权限，需要引导用户到设置
-            openAppSettings(activity)
-            return
-        }
-        
-        // Android 10 可以直接请求
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            activity.requestPermissions(
-                arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
-                REQUEST_CODE_BACKGROUND_LOCATION
-            )
-        }
-    }
-    
-    /**
      * 处理权限请求结果
      * 
-     * 在 Activity 或 Fragment 的 onRequestPermissionsResult 中调用
+     * 在 Activity 的 onRequestPermissionsResult 中调用
      */
     fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
-        when (requestCode) {
-            REQUEST_CODE_LOCATION, REQUEST_CODE_BACKGROUND_LOCATION -> {
-                val granted = mutableListOf<String>()
-                val denied = mutableListOf<String>()
-                
-                permissions.forEachIndexed { index, permission ->
-                    if (grantResults.getOrNull(index) == PackageManager.PERMISSION_GRANTED) {
-                        granted.add(permission)
-                    } else {
-                        denied.add(permission)
-                    }
-                }
-                
-                if (denied.isEmpty()) {
-                    permissionCallback?.onPermissionGranted(granted)
+        if (requestCode == REQUEST_CODE_LOCATION) {
+            val granted = mutableListOf<String>()
+            val denied = mutableListOf<String>()
+            
+            permissions.forEachIndexed { index, permission ->
+                if (grantResults.getOrNull(index) == PackageManager.PERMISSION_GRANTED) {
+                    granted.add(permission)
                 } else {
-                    // 检查是否永久拒绝 (此处无法准确判断，需要在下次请求时检查)
-                    permissionCallback?.onPermissionDenied(denied, false)
+                    denied.add(permission)
                 }
+            }
+            
+            if (denied.isEmpty()) {
+                permissionCallback?.onPermissionGranted(granted)
+            } else {
+                permissionCallback?.onPermissionDenied(denied, false)
             }
         }
     }
@@ -275,7 +188,6 @@ class LocationPermissionManager private constructor(private val context: Context
         return PermissionStatus(
             hasFineLocation = hasFineLocationPermission(),
             hasCoarseLocation = hasCoarseLocationPermission(),
-            hasBackgroundLocation = hasBackgroundLocationPermission(),
             androidVersion = Build.VERSION.SDK_INT
         )
     }
@@ -286,14 +198,9 @@ class LocationPermissionManager private constructor(private val context: Context
     data class PermissionStatus(
         val hasFineLocation: Boolean,
         val hasCoarseLocation: Boolean,
-        val hasBackgroundLocation: Boolean,
         val androidVersion: Int
     ) {
         val hasAnyLocationPermission: Boolean
             get() = hasFineLocation || hasCoarseLocation
-        
-        val hasAllLocationPermissions: Boolean
-            get() = hasFineLocation && hasCoarseLocation && hasBackgroundLocation
     }
 }
-

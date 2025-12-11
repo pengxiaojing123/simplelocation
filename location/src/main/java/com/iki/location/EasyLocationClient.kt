@@ -271,7 +271,7 @@ class EasyLocationClient(activity: Activity) {
             isProcessing = false
             currentCallback = null
             currentRequest = null
-            locationManager.stopLocationUpdates()
+            locationManager.cancel()
         }
     }
     

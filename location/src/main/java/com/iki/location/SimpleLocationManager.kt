@@ -7,7 +7,6 @@ import com.google.android.gms.common.api.ResolvableApiException
 import com.iki.location.callback.*
 import com.iki.location.model.LocationData
 import com.iki.location.model.LocationError
-import com.iki.location.model.LocationProvider
 import com.iki.location.model.LocationRequest
 import com.iki.location.permission.LocationPermissionManager
 import com.iki.location.provider.GmsLocationProvider
@@ -21,7 +20,7 @@ import kotlin.coroutines.CoroutineContext
  * 核心功能:
  * 1. 权限管理 - 支持 Android 各版本的权限申请
  * 2. GMS 优先定位 - 优先使用 Google Play Services 定位
- * 3. GPS 备选定位 - GMS 失败时自动切换到 GPS 定位
+ * 3. GPS 备选定位 - GMS 失败时自动切换到 GPS/WiFi 定位
  * 4. GMS 精确定位开关检测 - 检测并处理 Google Location Accuracy 开关状态
  * 
  * 使用示例:
@@ -78,17 +77,13 @@ class SimpleLocationManager private constructor(
     private val gpsProvider = GpsLocationProvider(context)
     private val permissionManager = LocationPermissionManager.getInstance(context)
     
-    private var stateListener: LocationStateListener? = null
-    private var currentProvider: String? = null
-    private var isLocating = false
-    
     // ==================== 权限管理 ====================
     
     /**
      * 检查是否有定位权限
      */
     fun hasLocationPermission(): Boolean {
-        return permissionManager.hasForegroundLocationPermission()
+        return permissionManager.hasLocationPermission()
     }
     
     /**
@@ -99,13 +94,6 @@ class SimpleLocationManager private constructor(
     }
     
     /**
-     * 检查是否有后台定位权限
-     */
-    fun hasBackgroundLocationPermission(): Boolean {
-        return permissionManager.hasBackgroundLocationPermission()
-    }
-    
-    /**
      * 获取权限状态
      */
     fun getPermissionStatus(): LocationPermissionManager.PermissionStatus {
@@ -113,28 +101,19 @@ class SimpleLocationManager private constructor(
     }
     
     /**
-     * 请求前台定位权限
+     * 请求定位权限
      * 
      * @param activity Activity 实例
      * @param callback 权限回调
      */
     fun requestLocationPermission(activity: Activity, callback: PermissionCallback) {
-        permissionManager.requestForegroundLocationPermission(activity, callback)
-    }
-    
-    /**
-     * 请求后台定位权限
-     * 
-     * 注意: Android 11+ 需要先获取前台权限，再单独申请后台权限
-     */
-    fun requestBackgroundLocationPermission(activity: Activity, callback: PermissionCallback) {
-        permissionManager.requestBackgroundLocationPermission(activity, callback)
+        permissionManager.requestLocationPermission(activity, callback)
     }
     
     /**
      * 处理权限请求结果
      * 
-     * 在 Activity/Fragment 的 onRequestPermissionsResult 中调用
+     * 在 Activity 的 onRequestPermissionsResult 中调用
      */
     fun onRequestPermissionsResult(
         requestCode: Int,
@@ -169,10 +148,6 @@ class SimpleLocationManager private constructor(
     
     /**
      * 检查 Google Location Accuracy (精确定位开关) 是否开启
-     * 
-     * 这个开关在设置中通常叫做:
-     * - Google 位置精确度 / Google Location Accuracy
-     * - 使用 Google 位置信息服务提高位置精确度
      */
     suspend fun isGoogleLocationAccuracyEnabled(): Boolean {
         return gmsProvider.isGoogleLocationAccuracyEnabled()
@@ -194,9 +169,6 @@ class SimpleLocationManager private constructor(
     
     /**
      * 检查位置设置是否满足定位要求
-     * 
-     * @param request 定位请求配置
-     * @return 位置设置检查结果
      */
     suspend fun checkLocationSettings(
         request: LocationRequest = LocationRequest()
@@ -206,7 +178,6 @@ class SimpleLocationManager private constructor(
         }
         
         if (!isGmsAvailable()) {
-            // GMS 不可用，检查 GPS
             return if (isGpsEnabled()) {
                 LocationSettingsResult.Satisfied
             } else {
@@ -214,7 +185,6 @@ class SimpleLocationManager private constructor(
             }
         }
         
-        // 检查 GMS 位置设置
         return when (val result = gmsProvider.checkLocationSettings(request)) {
             is GmsLocationProvider.LocationSettingsCheckResult.Satisfied -> {
                 LocationSettingsResult.Satisfied
@@ -224,7 +194,7 @@ class SimpleLocationManager private constructor(
             }
             is GmsLocationProvider.LocationSettingsCheckResult.Failed -> {
                 if (isGpsEnabled()) {
-                    LocationSettingsResult.Satisfied // GPS 可用作为备选
+                    LocationSettingsResult.Satisfied
                 } else {
                     LocationSettingsResult.LocationDisabled
                 }
@@ -239,8 +209,7 @@ class SimpleLocationManager private constructor(
      * 
      * 策略:
      * 1. 优先使用 GMS 定位
-     * 2. GMS 不可用或失败时，自动切换到 GPS 定位
-     * 3. 如果 GMS 精确定位开关未开启，会记录警告但仍尝试定位
+     * 2. GMS 不可用或失败时，自动切换到 GPS/WiFi 定位
      * 
      * @param request 定位请求配置
      * @param callback 定位结果回调
@@ -283,7 +252,6 @@ class SimpleLocationManager private constructor(
         if (!hasLocationPermission()) {
             return Result.failure(Exception(LocationError.PermissionDenied().message))
         }
-        
         return getLocationInternal(request)
     }
     
@@ -294,7 +262,7 @@ class SimpleLocationManager private constructor(
         request: LocationRequest
     ): Result<LocationData> {
         Log.d(TAG, "========== 开始定位 ==========")
-        Log.d(TAG, "定位配置: priority=${request.priority}, timeout=${request.timeoutMillis}ms, interval=${request.intervalMillis}ms")
+        Log.d(TAG, "定位配置: priority=${request.priority}, timeout=${request.timeoutMillis}ms")
         
         val startTime = System.currentTimeMillis()
         
@@ -302,14 +270,6 @@ class SimpleLocationManager private constructor(
         if (isGmsAvailable()) {
             Log.d(TAG, "[GMS] GMS可用，开始GMS定位...")
             
-            // 检查 Google Location Accuracy 开关
-            val isAccuracyEnabled = isGoogleLocationAccuracyEnabled()
-            Log.d(TAG, "[GMS] Google Location Accuracy开关: ${if (isAccuracyEnabled) "已开启" else "未开启"}")
-            if (!isAccuracyEnabled) {
-                Log.w(TAG, "[GMS] ⚠️ Google Location Accuracy未开启，精度可能降低")
-            }
-            
-            Log.d(TAG, "[GMS] 调用 gmsProvider.getLocation()...")
             val gmsStartTime = System.currentTimeMillis()
             val gmsResult = gmsProvider.getLocation(request)
             val gmsCostTime = System.currentTimeMillis() - gmsStartTime
@@ -318,19 +278,16 @@ class SimpleLocationManager private constructor(
                 val location = gmsResult.getOrNull()
                 Log.d(TAG, "[GMS] ✅ GMS定位成功! 耗时: ${gmsCostTime}ms")
                 Log.d(TAG, "[GMS] 位置: lat=${location?.latitude}, lng=${location?.longitude}, accuracy=${location?.accuracy}m")
-                notifyProviderSwitch(currentProvider, "GMS", "GMS location success")
-                currentProvider = "GMS"
                 return gmsResult
             }
             
             Log.w(TAG, "[GMS] ❌ GMS定位失败! 耗时: ${gmsCostTime}ms, 错误: ${gmsResult.exceptionOrNull()?.message}")
-            Log.w(TAG, "[GMS] 异常详情: ${gmsResult.exceptionOrNull()}")
         } else {
-            Log.d(TAG, "[GMS] GMS不可用 (errorCode=${gmsProvider.getGmsAvailabilityErrorCode()})，直接使用GPS")
+            Log.d(TAG, "[GMS] GMS不可用 (errorCode=${gmsProvider.getGmsAvailabilityErrorCode()})，直接使用GPS/WiFi")
         }
         
-        // GMS 失败或不可用，尝试 GPS 定位
-        Log.d(TAG, "[GPS] 开始GPS定位 (GMS回退)...")
+        // GMS 失败或不可用，尝试 GPS/WiFi 定位
+        Log.d(TAG, "[GPS] 开始GPS/WiFi定位...")
         Log.d(TAG, "[GPS] GPS开启: ${gpsProvider.isGpsEnabled()}, 网络定位开启: ${gpsProvider.isNetworkLocationEnabled()}")
         
         val gpsStartTime = System.currentTimeMillis()
@@ -339,12 +296,10 @@ class SimpleLocationManager private constructor(
         
         if (gpsResult.isSuccess) {
             val location = gpsResult.getOrNull()
-            Log.d(TAG, "[GPS] ✅ GPS定位成功! 耗时: ${gpsCostTime}ms")
+            Log.d(TAG, "[GPS] ✅ GPS/WiFi定位成功! 耗时: ${gpsCostTime}ms")
             Log.d(TAG, "[GPS] 位置: lat=${location?.latitude}, lng=${location?.longitude}, accuracy=${location?.accuracy}m")
-            notifyProviderSwitch(currentProvider, "GPS", "Fallback to GPS")
-            currentProvider = "GPS"
         } else {
-            Log.e(TAG, "[GPS] ❌ GPS定位也失败! 耗时: ${gpsCostTime}ms, 错误: ${gpsResult.exceptionOrNull()?.message}")
+            Log.e(TAG, "[GPS] ❌ GPS/WiFi定位也失败! 耗时: ${gpsCostTime}ms, 错误: ${gpsResult.exceptionOrNull()?.message}")
         }
         
         val totalTime = System.currentTimeMillis() - startTime
@@ -353,151 +308,34 @@ class SimpleLocationManager private constructor(
         return gpsResult
     }
     
-    // ==================== 连续定位 ====================
-    
-    /**
-     * 开始连续定位
-     * 
-     * 策略与单次定位相同:
-     * 1. 优先使用 GMS
-     * 2. GMS 失败时自动切换到 GPS
-     * 
-     * @param request 定位请求配置
-     * @param callback 定位结果回调
-     */
-    fun startLocationUpdates(
-        request: LocationRequest = LocationRequest(),
-        callback: ContinuousLocationCallback
-    ) {
-        if (!hasLocationPermission()) {
-            callback.onLocationError(LocationError.PermissionDenied())
-            return
-        }
-        
-        if (isLocating) {
-            stopLocationUpdates()
-        }
-        
-        isLocating = true
-        stateListener?.onLocationStarted()
-        
-        val wrappedCallback = object : LocationResultCallback {
-            private var gmsFailedCount = 0
-            private var useGps = !isGmsAvailable()
-            
-            override fun onLocationSuccess(location: LocationData) {
-                gmsFailedCount = 0 // 重置失败计数
-                callback.onLocationSuccess(location)
-            }
-            
-            override fun onLocationError(error: LocationError) {
-                if (!useGps && error !is LocationError.PermissionDenied) {
-                    gmsFailedCount++
-                    
-                    // GMS 连续失败 3 次，切换到 GPS
-                    if (gmsFailedCount >= 3) {
-                        Log.w(TAG, "GMS failed $gmsFailedCount times, switching to GPS")
-                        useGps = true
-                        gmsProvider.stopLocationUpdates()
-                        
-                        notifyProviderSwitch("GMS", "GPS", "GMS failed multiple times")
-                        callback.onProviderChanged("GMS", "GPS")
-                        
-                        // 启动 GPS 定位
-                        gpsProvider.startLocationUpdates(request, this)
-                        return
-                    }
-                }
-                
-                callback.onLocationError(error)
-            }
-        }
-        
-        // 优先使用 GMS
-        if (isGmsAvailable()) {
-            launch {
-                // 检查并记录 Google Location Accuracy 状态
-                val isAccuracyEnabled = isGoogleLocationAccuracyEnabled()
-                if (!isAccuracyEnabled) {
-                    Log.w(TAG, "Google Location Accuracy is disabled")
-                }
-            }
-            
-            currentProvider = "GMS"
-            gmsProvider.startLocationUpdates(request, wrappedCallback)
-        } else {
-            currentProvider = "GPS"
-            gpsProvider.startLocationUpdates(request, wrappedCallback)
-        }
-    }
-    
-    /**
-     * 停止连续定位
-     */
-    fun stopLocationUpdates() {
-        gmsProvider.stopLocationUpdates()
-        gpsProvider.stopLocationUpdates()
-        
-        isLocating = false
-        currentProvider = null
-        stateListener?.onLocationStopped()
-    }
-    
-    // ==================== 状态监听 ====================
-    
-    /**
-     * 设置定位状态监听器
-     */
-    fun setLocationStateListener(listener: LocationStateListener?) {
-        this.stateListener = listener
-    }
-    
-    /**
-     * 获取当前使用的定位提供者
-     */
-    fun getCurrentProvider(): String? {
-        return currentProvider
-    }
-    
-    /**
-     * 是否正在定位
-     */
-    fun isLocating(): Boolean {
-        return isLocating
-    }
-    
     // ==================== 工具方法 ====================
     
     /**
      * 获取最后已知位置
      */
     suspend fun getLastKnownLocation(): LocationData? {
-        // 优先从 GMS 获取
         if (isGmsAvailable()) {
             val gmsLocation = gmsProvider.getLastKnownLocation()
             if (gmsLocation != null) {
                 return gmsLocation
             }
         }
-        
-        // 从 GPS 获取
         return gpsProvider.getLastKnownLocation()
     }
     
     /**
-     * 通知定位来源切换
+     * 取消定位请求
      */
-    private fun notifyProviderSwitch(from: String?, to: String, reason: String) {
-        if (from != null && from != to) {
-            stateListener?.onProviderSwitched(from, to, reason)
-        }
+    fun cancel() {
+        gmsProvider.cancel()
+        gpsProvider.cancel()
     }
     
     /**
      * 销毁资源
      */
     fun destroy() {
-        stopLocationUpdates()
+        cancel()
         job.cancel()
         instance = null
     }
@@ -506,20 +344,11 @@ class SimpleLocationManager private constructor(
      * 位置设置检查结果
      */
     sealed class LocationSettingsResult {
-        /** 设置满足要求 */
         object Satisfied : LocationSettingsResult()
-        
-        /** 需要权限 */
         object PermissionRequired : LocationSettingsResult()
-        
-        /** 定位服务未开启 */
         object LocationDisabled : LocationSettingsResult()
         
-        /** 可以通过对话框解决 */
         data class Resolvable(val exception: ResolvableApiException) : LocationSettingsResult() {
-            /**
-             * 启动设置解决对话框
-             */
             fun startResolutionForResult(activity: Activity, requestCode: Int = REQUEST_CHECK_SETTINGS) {
                 try {
                     exception.startResolutionForResult(activity, requestCode)
@@ -530,4 +359,3 @@ class SimpleLocationManager private constructor(
         }
     }
 }
-

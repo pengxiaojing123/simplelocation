@@ -108,31 +108,22 @@ sealed class LocationError(val message: String, val code: Int) {
 }
 
 /**
- * 定位请求配置
+ * 单次定位请求配置
+ * 
+ * @param priority 定位精度优先级，影响定位速度和精度
+ * @param timeoutMillis 定位超时时间（毫秒），超时后返回失败
  */
 data class LocationRequest(
-    /** 定位间隔 (毫秒) */
-    val intervalMillis: Long = 10000L,
-    /** 最快定位间隔 (毫秒) */
-    val fastestIntervalMillis: Long = 5000L,
-    /** 定位优先级 */
+    /** 定位精度优先级 */
     val priority: Priority = Priority.HIGH_ACCURACY,
-    /** 超时时间 (毫秒) */
-    val timeoutMillis: Long = 30000L,
-    /** 最小位移距离 (米) - 仅当位移大于此值时才回调 */
-    val minDistanceMeters: Float = 0f,
-    /** 是否需要后台定位权限 */
-    val needBackgroundLocation: Boolean = false
+    /** 定位超时时间 (毫秒)，默认30秒 */
+    val timeoutMillis: Long = 30000L
 ) {
     enum class Priority {
-        /** 高精度 - 优先使用GPS */
+        /** 高精度 - 同时使用GPS和WiFi，取最快返回的结果 */
         HIGH_ACCURACY,
-        /** 平衡模式 - 综合考虑精度和电量 */
-        BALANCED_POWER_ACCURACY,
-        /** 低功耗 - 优先使用网络定位 */
-        LOW_POWER,
-        /** 被动模式 - 只使用其他应用获取的定位 */
-        PASSIVE
+        /** 低功耗 - 优先使用网络定位(WiFi) */
+        LOW_POWER
     }
 }
 
