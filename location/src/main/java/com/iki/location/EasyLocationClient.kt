@@ -19,42 +19,34 @@ import java.lang.ref.WeakReference
  * 
  * 封装了完整的定位流程：
  * 1. 检查并申请定位权限
- * 2. 检查并请求开启 GMS 精确定位开关（如果 GMS 可用）
- * 3. 执行定位
- * 4. 返回定位结果或错误
+ * 2. 检查精确定位权限（如果 requireFineLocation = true）
+ * 3. 检查并请求开启 GMS 精确定位开关（如果 GMS 可用）
+ * 4. 执行定位
+ * 5. 返回定位结果或错误
  * 
  * 使用示例:
- * ```kotlin
- * class MainActivity : AppCompatActivity() {
- *     private lateinit var easyLocationClient: EasyLocationClient
- *     
- *     override fun onCreate(savedInstanceState: Bundle?) {
- *         super.onCreate(savedInstanceState)
- *         easyLocationClient = EasyLocationClient(this)
- *         
- *         // 一键定位
- *         easyLocationClient.getLocation(object : EasyLocationCallback {
- *             override fun onSuccess(location: LocationData) {
- *                 // 定位成功
- *             }
- *             override fun onError(error: EasyLocationError) {
- *                 // 处理错误
- *             }
- *         })
+ * ```java
+ * EasyLocationClient client = new EasyLocationClient(activity);
+ * 
+ * // 一键定位（使用默认配置）
+ * client.getLocation(new EasyLocationCallback() {
+ *     @Override
+ *     public void onSuccess(LocationData location) {
+ *         // 定位成功
  *     }
  *     
- *     override fun onRequestPermissionsResult(...) {
- *         easyLocationClient.onRequestPermissionsResult(requestCode, permissions, grantResults)
+ *     @Override
+ *     public void onError(EasyLocationError error) {
+ *         // 处理错误
  *     }
- *     
- *     override fun onActivityResult(...) {
- *         easyLocationClient.onActivityResult(requestCode, resultCode, data)
- *     }
- *     
- *     override fun onDestroy() {
- *         easyLocationClient.destroy()
- *     }
- * }
+ * });
+ * 
+ * // 或者指定参数
+ * client.getLocation(
+ *     true,   // requireFineLocation: 要求精确定位
+ *     15000L, // timeoutMillis: 超时时间
+ *     callback
+ * );
  * ```
  */
 class EasyLocationClient(activity: Activity) {
@@ -62,6 +54,9 @@ class EasyLocationClient(activity: Activity) {
     companion object {
         private const val TAG = "mylocation"
         const val REQUEST_CODE_GMS_SETTINGS = 10086
+        
+        /** 默认超时时间 30 秒 */
+        const val DEFAULT_TIMEOUT_MILLIS = 30000L
     }
     
     private val activityRef = WeakReference(activity)
@@ -69,22 +64,38 @@ class EasyLocationClient(activity: Activity) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     
     private var currentCallback: EasyLocationCallback? = null
-    private var currentRequest: LocationRequest? = null
+    private var requireFineLocation: Boolean = false
+    private var timeoutMillis: Long = DEFAULT_TIMEOUT_MILLIS
     private var isProcessing = false
+    
+    /**
+     * 一键获取定位（使用默认配置）
+     * 
+     * 默认配置：
+     * - requireFineLocation = false（接受模糊定位）
+     * - timeoutMillis = 30000（30秒超时）
+     * 
+     * @param callback 回调
+     */
+    fun getLocation(callback: EasyLocationCallback) {
+        getLocation(
+            requireFineLocation = false,
+            timeoutMillis = DEFAULT_TIMEOUT_MILLIS,
+            callback = callback
+        )
+    }
     
     /**
      * 一键获取定位
      * 
-     * 流程:
-     * 1. 检查权限 → 没有则申请
-     * 2. 检查 GMS 精确定位开关 → 没开则请求开启
-     * 3. 执行定位 → 返回结果
-     * 
-     * @param request 定位请求配置
+     * @param requireFineLocation 是否要求精确定位权限。
+     *                            如果为 true，用户只授予模糊定位权限时会触发错误回调
+     * @param timeoutMillis 定位超时时间（毫秒）
      * @param callback 回调
      */
     fun getLocation(
-        request: LocationRequest = LocationRequest(),
+        requireFineLocation: Boolean,
+        timeoutMillis: Long,
         callback: EasyLocationCallback
     ) {
         val activity = activityRef.get()
@@ -102,9 +113,11 @@ class EasyLocationClient(activity: Activity) {
         
         isProcessing = true
         currentCallback = callback
-        currentRequest = request
+        this.requireFineLocation = requireFineLocation
+        this.timeoutMillis = timeoutMillis
         
         Log.d(TAG, "[EasyLocation] ========== 开始一键定位流程 ==========")
+        Log.d(TAG, "[EasyLocation] 配置: requireFineLocation=$requireFineLocation, timeoutMillis=$timeoutMillis")
         
         // Step 1: 检查权限
         checkAndRequestPermission(activity)
@@ -118,6 +131,10 @@ class EasyLocationClient(activity: Activity) {
         
         if (locationManager.hasLocationPermission()) {
             Log.d(TAG, "[EasyLocation] 已有定位权限")
+            // 检查是否满足精确定位要求
+            if (!checkFineLocationRequirement()) {
+                return
+            }
             checkGmsAccuracy(activity)
             return
         }
@@ -126,6 +143,12 @@ class EasyLocationClient(activity: Activity) {
         locationManager.requestLocationPermission(activity, object : PermissionCallback {
             override fun onPermissionGranted(permissions: List<String>) {
                 Log.d(TAG, "[EasyLocation] ✅ 权限已授予: $permissions")
+                
+                // 检查是否满足精确定位要求
+                if (!checkFineLocationRequirement()) {
+                    return
+                }
+                
                 val act = activityRef.get()
                 if (act != null && !act.isFinishing && !act.isDestroyed) {
                     checkGmsAccuracy(act)
@@ -142,6 +165,20 @@ class EasyLocationClient(activity: Activity) {
     }
     
     /**
+     * 检查是否满足精确定位权限要求
+     * 
+     * @return true 满足要求，可以继续；false 不满足要求，已触发错误回调
+     */
+    private fun checkFineLocationRequirement(): Boolean {
+        if (requireFineLocation && !locationManager.hasFineLocationPermission()) {
+            Log.e(TAG, "[EasyLocation] ❌ 要求精确定位但用户只授予了模糊定位权限")
+            finishWithError(EasyLocationError.FineLocationRequired)
+            return false
+        }
+        return true
+    }
+    
+    /**
      * Step 2: 检查 GMS 精确定位开关
      */
     private fun checkGmsAccuracy(activity: Activity) {
@@ -154,9 +191,14 @@ class EasyLocationClient(activity: Activity) {
             return
         }
         
+        // 内部固定使用 HIGH_ACCURACY
+        val request = LocationRequest(
+            priority = LocationRequest.Priority.HIGH_ACCURACY,
+            timeoutMillis = timeoutMillis
+        )
+        
         scope.launch {
-            // 检查位置设置
-            when (val result = locationManager.checkLocationSettings(currentRequest ?: LocationRequest())) {
+            when (val result = locationManager.checkLocationSettings(request)) {
                 is SimpleLocationManager.LocationSettingsResult.Satisfied -> {
                     Log.d(TAG, "[EasyLocation] ✅ GMS 位置设置满足要求")
                     startLocation()
@@ -192,7 +234,11 @@ class EasyLocationClient(activity: Activity) {
     private fun startLocation() {
         Log.d(TAG, "[EasyLocation] Step 3: 开始定位")
         
-        val request = currentRequest ?: LocationRequest()
+        // 内部固定使用 HIGH_ACCURACY
+        val request = LocationRequest(
+            priority = LocationRequest.Priority.HIGH_ACCURACY,
+            timeoutMillis = timeoutMillis
+        )
         
         locationManager.getLocation(request, object : SingleLocationCallback {
             override fun onLocationSuccess(location: LocationData) {
@@ -215,7 +261,6 @@ class EasyLocationClient(activity: Activity) {
         isProcessing = false
         currentCallback?.onSuccess(location)
         currentCallback = null
-        currentRequest = null
     }
     
     /**
@@ -226,7 +271,6 @@ class EasyLocationClient(activity: Activity) {
         isProcessing = false
         currentCallback?.onError(error)
         currentCallback = null
-        currentRequest = null
     }
     
     /**
@@ -270,7 +314,6 @@ class EasyLocationClient(activity: Activity) {
             Log.d(TAG, "[EasyLocation] 取消定位请求")
             isProcessing = false
             currentCallback = null
-            currentRequest = null
             locationManager.cancel()
         }
     }
@@ -318,12 +361,16 @@ interface EasyLocationCallback {
  */
 sealed class EasyLocationError(val message: String, val code: Int) {
     
-    /** 权限被拒绝 */
+    /** 权限被拒绝（用户拒绝所有定位权限） */
     class PermissionDenied(val permanentlyDenied: Boolean) : 
         EasyLocationError(
             if (permanentlyDenied) "权限被永久拒绝，请到设置中开启" else "定位权限被拒绝",
             CODE_PERMISSION_DENIED
         )
+    
+    /** 要求精确定位但用户只授予了模糊定位 */
+    object FineLocationRequired : 
+        EasyLocationError("需要精确定位权限，但用户只授予了模糊定位", CODE_FINE_LOCATION_REQUIRED)
     
     /** GMS 精确定位开关被拒绝 */
     object GmsAccuracyDenied : 
@@ -347,11 +394,12 @@ sealed class EasyLocationError(val message: String, val code: Int) {
     
     companion object {
         const val CODE_PERMISSION_DENIED = 2001
-        const val CODE_GMS_ACCURACY_DENIED = 2002
-        const val CODE_LOCATION_DISABLED = 2003
-        const val CODE_LOCATION_FAILED = 2004
-        const val CODE_ACTIVITY_DESTROYED = 2005
-        const val CODE_ALREADY_PROCESSING = 2006
+        const val CODE_FINE_LOCATION_REQUIRED = 2002
+        const val CODE_GMS_ACCURACY_DENIED = 2003
+        const val CODE_LOCATION_DISABLED = 2004
+        const val CODE_LOCATION_FAILED = 2005
+        const val CODE_ACTIVITY_DESTROYED = 2006
+        const val CODE_ALREADY_PROCESSING = 2007
     }
     
     /**
@@ -360,9 +408,9 @@ sealed class EasyLocationError(val message: String, val code: Int) {
     val canResolveInSettings: Boolean
         get() = when (this) {
             is PermissionDenied -> permanentlyDenied
+            is FineLocationRequired -> true  // 可以到设置中改为精确定位
             is GmsAccuracyDenied -> true
             is LocationDisabled -> true
             else -> false
         }
 }
-

@@ -133,6 +133,9 @@ class LocationPermissionManager private constructor(private val context: Context
      * 处理权限请求结果
      * 
      * 在 Activity 的 onRequestPermissionsResult 中调用
+     * 
+     * 注意：只要获得 FINE 或 COARSE 任意一个权限就算成功
+     * 用户可以选择"模糊定位"只授予 COARSE 权限
      */
     fun onRequestPermissionsResult(
         requestCode: Int,
@@ -151,7 +154,12 @@ class LocationPermissionManager private constructor(private val context: Context
                 }
             }
             
-            if (denied.isEmpty()) {
+            // 只要有任意一个定位权限被授予就算成功
+            // 用户可以选择"模糊定位"只授予 COARSE 权限
+            if (granted.any { 
+                it == Manifest.permission.ACCESS_FINE_LOCATION || 
+                it == Manifest.permission.ACCESS_COARSE_LOCATION 
+            }) {
                 permissionCallback?.onPermissionGranted(granted)
             } else {
                 permissionCallback?.onPermissionDenied(denied, false)
