@@ -1,215 +1,128 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true">
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- 状态栏 -->
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#F0F0F0"
+        android:padding="8dp"
+        android:textSize="12sp"
+        android:text="状态加载中..." />
+
+    <!-- 一键定位按钮组 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="12dp">
+
+        <Button
+            android:id="@+id/btnEasyLocation"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="🚀 一键定位\n(接受模糊)"
+            android:textSize="12sp"
+            android:layout_marginEnd="4dp" />
+
+        <Button
+            android:id="@+id/btnEasyLocationFine"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="🎯 一键定位\n(要求精确)"
+            android:textSize="12sp"
+            android:layout_marginStart="4dp" />
+    </LinearLayout>
+
+    <!-- 其他功能按钮 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
+
+        <Button
+            android:id="@+id/btnSingleLocation"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="📍 手动定位"
+            android:textSize="12sp"
+            android:layout_marginEnd="4dp" />
+
+        <Button
+            android:id="@+id/btnRequestPermission"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="🔐 申请权限"
+            android:textSize="12sp"
+            android:layout_marginStart="4dp" />
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
-
-        <!-- 标题 -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="📍 定位 SDK 测试"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="16dp" />
-
-        <!-- 状态卡片 -->
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="4dp"
-            xmlns:app="http://schemas.android.com/apk/res-auto">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="状态检查"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="8dp" />
-
-                <TextView
-                    android:id="@+id/tvStatusPermission"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="定位权限: ❌" />
-
-                <TextView
-                    android:id="@+id/tvStatusFinePermission"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="精确定位权限: ❌" />
-
-                <TextView
-                    android:id="@+id/tvStatusGms"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="GMS 可用: ❌" />
-
-                <TextView
-                    android:id="@+id/tvStatusGps"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="GPS 开启: ❌" />
-
-                <TextView
-                    android:id="@+id/tvStatusLocation"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="定位服务可用: ❌" />
-
-                <TextView
-                    android:id="@+id/tvStatusGmsAccuracy"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="GMS 精确定位开关: ❌" />
-
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
-
-        <!-- 推荐接口 -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="⭐ 推荐接口"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
 
         <Button
-            android:id="@+id/btnEasyLocation"
-            android:layout_width="match_parent"
+            android:id="@+id/btnOpenAppSettings"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="🚀 一键定位 (自动处理权限+GMS开关)"
-            android:textAllCaps="false" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="分步操作"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="8dp" />
+            android:layout_weight="1"
+            android:text="⚙️ 应用设置"
+            android:textSize="12sp"
+            android:layout_marginEnd="4dp" />
 
         <Button
-            android:id="@+id/btnRequestPermission"
-            android:layout_width="match_parent"
+            android:id="@+id/btnOpenLocationSettings"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="1️⃣ 请求定位权限"
-            android:textAllCaps="false" />
-
-        <Button
-            android:id="@+id/btnCheckGmsAccuracy"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="2️⃣ 检查 GMS 精确定位开关"
-            android:textAllCaps="false" />
-
-        <Button
-            android:id="@+id/btnEnableGmsAccuracy"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="2️⃣.1 请求开启 GMS 精确定位"
-            android:textAllCaps="false" />
-
-        <Button
-            android:id="@+id/btnSingleLocation"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="3️⃣ 单次定位 (GMS优先，GPS兜底)"
-            android:textAllCaps="false" />
-
-        <Button
-            android:id="@+id/btnLastLocation"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="4️⃣ 获取最后已知位置"
-            android:textAllCaps="false" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-
-            <Button
-                android:id="@+id/btnLocationSettings"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="定位设置"
-                android:textAllCaps="false"
-                android:layout_marginEnd="4dp" />
-
-            <Button
-                android:id="@+id/btnAppSettings"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="应用设置"
-                android:textAllCaps="false"
-                android:layout_marginStart="4dp" />
-
-        </LinearLayout>
-
-        <Button
-            android:id="@+id/btnClearLogs"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🗑️ 清除日志"
-            android:textAllCaps="false"
-            style="@style/Widget.Material3.Button.OutlinedButton" />
-
-        <!-- 日志区域 -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="日志"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="8dp" />
-
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minHeight="200dp"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="4dp"
-            xmlns:app="http://schemas.android.com/apk/res-auto">
-
-            <ScrollView
-                android:layout_width="match_parent"
-                android:layout_height="200dp">
-
-                <TextView
-                    android:id="@+id/tvLogs"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="12dp"
-                    android:textSize="12sp"
-                    android:fontFamily="monospace"
-                    android:text="暂无日志" />
-
-            </ScrollView>
-        </androidx.cardview.widget.CardView>
-
+            android:layout_weight="1"
+            android:text="📍 定位设置"
+            android:textSize="12sp"
+            android:layout_marginStart="4dp" />
     </LinearLayout>
-</ScrollView>
 
+    <!-- 日志区域 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="📋 日志:"
+        android:textStyle="bold" />
 
+    <ScrollView
+        android:id="@+id/scrollView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="4dp"
+        android:background="#1A000000">
+
+        <TextView
+            android:id="@+id/tvLog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            android:fontFamily="monospace"
+            android:textSize="11sp"
+            android:textColor="#333333" />
+    </ScrollView>
+
+    <Button
+        android:id="@+id/btnClearLog"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="🗑️ 清空日志" />
+
+</LinearLayout>

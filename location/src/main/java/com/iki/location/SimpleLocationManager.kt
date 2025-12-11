@@ -60,6 +60,7 @@ class SimpleLocationManager private constructor(
         /**
          * 获取 SimpleLocationManager 单例
          */
+        @JvmStatic
         fun getInstance(context: Context): SimpleLocationManager {
             return instance ?: synchronized(this) {
                 instance ?: SimpleLocationManager(context.applicationContext).also {
