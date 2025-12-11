@@ -2,13 +2,12 @@ package com.iki.location.provider
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.IntentSender
 import android.location.Location
-import android.os.Build
 import android.os.Looper
 import android.util.Log
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.iki.location.callback.LocationResultCallback
@@ -144,7 +143,7 @@ class GmsLocationProvider(private val context: Context) : BaseLocationProvider()
                 .setAlwaysShow(true) // 确保始终显示对话框
                 .build()
             
-            suspendCancellableCoroutine { continuation ->
+            suspendCancellableCoroutine<LocationSettingsCheckResult> { continuation ->
                 settingsClient.checkLocationSettings(settingsRequest)
                     .addOnSuccessListener { response ->
                         if (continuation.isActive) {
@@ -153,18 +152,15 @@ class GmsLocationProvider(private val context: Context) : BaseLocationProvider()
                     }
                     .addOnFailureListener { exception ->
                         if (continuation.isActive) {
-                            when (exception) {
+                            val result: LocationSettingsCheckResult = when (exception) {
                                 is ResolvableApiException -> {
-                                    continuation.resume(
-                                        LocationSettingsCheckResult.Resolvable(exception)
-                                    )
+                                    LocationSettingsCheckResult.Resolvable(exception)
                                 }
                                 else -> {
-                                    continuation.resume(
-                                        LocationSettingsCheckResult.Failed(exception)
-                                    )
+                                    LocationSettingsCheckResult.Failed(exception)
                                 }
                             }
+                            continuation.resume(result)
                         }
                     }
             }
