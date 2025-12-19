@@ -216,16 +216,8 @@ class GmsLocationProvider(private val context: Context) {
                 Log.d(TAG, "[GMS-Provider] ✅ 定位成功")
                 Result.success(LocationData.fromLocation(location, LocationProvider.GMS))
             } else {
-                // 尝试获取最后已知位置
-                Log.d(TAG, "[GMS-Provider] location为null，尝试获取最后已知位置...")
-                val lastLocation = getLastKnownLocation()
-                if (lastLocation != null) {
-                    Log.d(TAG, "[GMS-Provider] 使用最后已知位置")
-                    Result.success(lastLocation)
-                } else {
-                    Log.e(TAG, "[GMS-Provider] ❌ 无法获取位置")
-                    Result.failure(Exception(LocationError.LocationFailed().message))
-                }
+                Log.e(TAG, "[GMS-Provider] ❌ 无法获取位置 (返回null)")
+                Result.failure(Exception(LocationError.LocationFailed().message))
             }
         } catch (e: Exception) {
             Log.e(TAG, "[GMS-Provider] ❌ getLocation异常", e)

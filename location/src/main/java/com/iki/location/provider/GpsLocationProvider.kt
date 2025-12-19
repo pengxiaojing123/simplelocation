@@ -166,14 +166,8 @@ class GpsLocationProvider(private val context: Context) {
                     hasResumed = true
                     clearListeners()
                     
-                    val lastLocation = getLastKnownLocation()
-                    if (lastLocation != null) {
-                        Log.d(TAG, "[GPS-Provider] 使用最后已知位置")
-                        continuation.resume(Result.success(lastLocation))
-                    } else {
-                        Log.e(TAG, "[GPS-Provider] ❌ 超时且无最后已知位置")
-                        continuation.resume(Result.failure(Exception(LocationError.Timeout().message)))
-                    }
+                    Log.e(TAG, "[GPS-Provider] ❌ 超时")
+                    continuation.resume(Result.failure(Exception(LocationError.Timeout().message)))
                 }
             }
             
@@ -288,12 +282,7 @@ class GpsLocationProvider(private val context: Context) {
                     hasResumed = true
                     removeListener(listener)
                     
-                    val lastLocation = getLastKnownLocation()
-                    if (lastLocation != null) {
-                        continuation.resume(Result.success(lastLocation))
-                    } else {
-                        continuation.resume(Result.failure(Exception(LocationError.Timeout().message)))
-                    }
+                    continuation.resume(Result.failure(Exception(LocationError.Timeout().message)))
                 }
             }
             
