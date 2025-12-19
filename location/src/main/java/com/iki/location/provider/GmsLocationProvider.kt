@@ -183,9 +183,15 @@ class GmsLocationProvider(private val context: Context) {
             Log.d(TAG, "[GMS-Provider] 调用 fusedLocationClient.getCurrentLocation(priority=$priority)...")
             val startTime = System.currentTimeMillis()
             
+            // 构建 CurrentLocationRequest，强制要求最新位置 (MaxUpdateAgeMillis = 0)
+            val currentLocationRequest = CurrentLocationRequest.Builder()
+                .setPriority(priority)
+                .setMaxUpdateAgeMillis(0)
+                .build()
+            
             val location = suspendCancellableCoroutine<Location?> { continuation ->
                 fusedLocationClient.getCurrentLocation(
-                    priority,
+                    currentLocationRequest,
                     cancellationTokenSource!!.token
                 ).addOnSuccessListener { location ->
                     val costTime = System.currentTimeMillis() - startTime
