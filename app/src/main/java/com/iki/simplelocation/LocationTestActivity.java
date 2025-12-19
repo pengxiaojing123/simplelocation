@@ -140,71 +140,7 @@ public class LocationTestActivity extends AppCompatActivity {
             });
         });
 
-        // 手动单次定位
-        findViewById(R.id.btnSingleLocation).setOnClickListener(v -> {
-            if (!locationManager.hasLocationPermission()) {
-                addLogError("❌ 请先授予定位权限");
-                return;
-            }
-            
-            addLog("📍 开始手动单次定位...");
-            long startTime = System.currentTimeMillis();
 
-            locationManager.getLocation(new LocationRequest(), new SingleLocationCallback() {
-                @Override
-                public void onLocationSuccess(@NonNull LocationData location) {
-                    long costTime = System.currentTimeMillis() - startTime;
-                    addLog("✅ 定位成功! 耗时: " + costTime + "ms");
-                    addLog("   来源: " + location.getProvider());
-                    addLog("   经纬度: (" + location.getLatitude() + ", " + location.getLongitude() + ")");
-                    addLog("   精度: " + location.getAccuracy() + "m");
-                }
-
-                @Override
-                public void onLocationError(@NonNull LocationError error) {
-                    long costTime = System.currentTimeMillis() - startTime;
-                    addLogError("❌ 定位失败! 耗时: " + costTime + "ms, 错误: " + error.getMessage());
-                }
-            });
-        });
-
-        // 手动申请权限
-        findViewById(R.id.btnRequestPermission).setOnClickListener(v -> {
-            addLog("🔐 申请定位权限...");
-            locationManager.requestLocationPermission(this, new PermissionCallback() {
-                @Override
-                public void onPermissionGranted(@NonNull List<String> permissions) {
-                    addLog("✅ 权限已授予: " + permissions);
-                    updateStatus();
-                }
-
-                @Override
-                public void onPermissionDenied(@NonNull List<String> deniedPermissions, boolean permanentlyDenied) {
-                    addLogError("❌ 权限被拒绝: " + deniedPermissions);
-                    if (permanentlyDenied) {
-                        addLogError("   💡 权限被永久拒绝，请到设置中开启");
-                    }
-                    updateStatus();
-                }
-            });
-        });
-
-        // 打开应用设置
-        findViewById(R.id.btnOpenAppSettings).setOnClickListener(v -> {
-            addLog("⚙️ 打开应用设置...");
-            easyLocationClient.openAppSettings();
-        });
-
-        // 打开定位设置
-        findViewById(R.id.btnOpenLocationSettings).setOnClickListener(v -> {
-            addLog("📍 打开定位设置...");
-            easyLocationClient.openLocationSettings();
-        });
-
-        // 清空日志
-        findViewById(R.id.btnClearLog).setOnClickListener(v -> {
-            tvLog.setText("");
-        });
     }
 
     private void handleError(EasyLocationError error) {

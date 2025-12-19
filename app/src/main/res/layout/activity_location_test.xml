@@ -41,56 +41,6 @@
             android:layout_marginStart="4dp" />
     </LinearLayout>
 
-    <!-- 其他功能按钮 -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="8dp">
-
-        <Button
-            android:id="@+id/btnSingleLocation"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="📍 手动定位"
-            android:textSize="12sp"
-            android:layout_marginEnd="4dp" />
-
-        <Button
-            android:id="@+id/btnRequestPermission"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="🔐 申请权限"
-            android:textSize="12sp"
-            android:layout_marginStart="4dp" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="8dp">
-
-        <Button
-            android:id="@+id/btnOpenAppSettings"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="⚙️ 应用设置"
-            android:textSize="12sp"
-            android:layout_marginEnd="4dp" />
-
-        <Button
-            android:id="@+id/btnOpenLocationSettings"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="📍 定位设置"
-            android:textSize="12sp"
-            android:layout_marginStart="4dp" />
-    </LinearLayout>
 
     <!-- 日志区域 -->
     <TextView
@@ -117,12 +67,5 @@
             android:textSize="11sp"
             android:textColor="#333333" />
     </ScrollView>
-
-    <Button
-        android:id="@+id/btnClearLog"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="🗑️ 清空日志" />
 
 </LinearLayout>
