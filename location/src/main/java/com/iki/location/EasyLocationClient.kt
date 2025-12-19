@@ -166,7 +166,12 @@ class EasyLocationClient(activity: Activity) {
             override fun onPermissionDenied(deniedPermissions: List<String>, permanentlyDenied: Boolean) {
                 Log.e(TAG, "[EasyLocation] ❌ 权限被拒绝: $deniedPermissions, 永久拒绝: $permanentlyDenied")
                 if (permanentlyDenied) {
-                    finishWithError(EasyLocationError.PermissionPermanentlyDenied)
+                    val act = activityRef.get()
+                    if (act != null && !act.isFinishing && !act.isDestroyed) {
+                        showPermissionSettingDialog(act)
+                    } else {
+                        finishWithError(EasyLocationError.PermissionPermanentlyDenied)
+                    }
                 } else {
                     finishWithError(EasyLocationError.PermissionDenied)
                 }
@@ -219,7 +224,12 @@ class EasyLocationClient(activity: Activity) {
                     Log.e(TAG, "[EasyLocation] ❌ 用户已有模糊权限，需要去设置中修改为精确权限")
                     finishWithError(EasyLocationError.FineLocationRequired)
                 } else if (permanentlyDenied) {
-                    finishWithError(EasyLocationError.PermissionPermanentlyDenied)
+                    val act = activityRef.get()
+                    if (act != null && !act.isFinishing && !act.isDestroyed) {
+                        showPermissionSettingDialog(act)
+                    } else {
+                        finishWithError(EasyLocationError.PermissionPermanentlyDenied)
+                    }
                 } else {
                     finishWithError(EasyLocationError.PermissionDenied)
                 }
@@ -324,6 +334,24 @@ class EasyLocationClient(activity: Activity) {
             }
             .setNegativeButton("取消") { _, _ ->
                 finishWithError(EasyLocationError.LocationDisabled)
+            }
+            .setCancelable(false)
+            .show()
+    }
+    
+    /**
+     * 显示权限未授予提示框
+     */
+    private fun showPermissionSettingDialog(activity: Activity) {
+        android.app.AlertDialog.Builder(activity)
+            .setTitle("提示")
+            .setMessage("定位权限被永久拒绝，无法获取位置，请前往设置开启权限。")
+            .setPositiveButton("去设置") { _, _ ->
+                openAppSettings()
+                finishWithError(EasyLocationError.PermissionPermanentlyDenied)
+            }
+            .setNegativeButton("取消") { _, _ ->
+                finishWithError(EasyLocationError.PermissionPermanentlyDenied)
             }
             .setCancelable(false)
             .show()
