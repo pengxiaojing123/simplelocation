@@ -271,7 +271,7 @@ class EasyLocationClient(activity: Activity) {
                 
                 is SimpleLocationManager.LocationSettingsResult.LocationDisabled -> {
                     Log.e(TAG, "[EasyLocation] ❌ 定位服务未开启")
-                    finishWithError(EasyLocationError.LocationDisabled)
+                    showLocationSettingDialog(activity)
                 }
             }
         }
@@ -296,10 +296,37 @@ class EasyLocationClient(activity: Activity) {
             }
             
             override fun onLocationError(error: LocationError) {
+                if (error is LocationError.LocationDisabled) {
+                    val activity = activityRef.get()
+                    if (activity != null && !activity.isFinishing && !activity.isDestroyed) {
+                        Log.e(TAG, "[EasyLocation] ❌ 定位服务未开启")
+                        showLocationSettingDialog(activity)
+                        return
+                    }
+                }
+                
                 Log.e(TAG, "[EasyLocation] ❌ 定位失败: ${error.message}")
                 finishWithError(EasyLocationError.LocationFailed(error))
             }
         })
+    }
+    
+    /**
+     * 显示定位服务未开启提示框
+     */
+    private fun showLocationSettingDialog(activity: Activity) {
+        android.app.AlertDialog.Builder(activity)
+            .setTitle("提示")
+            .setMessage("定位服务未开启，无法获取位置，请前往设置打开。")
+            .setPositiveButton("去设置") { _, _ ->
+                openLocationSettings()
+                finishWithError(EasyLocationError.LocationDisabled)
+            }
+            .setNegativeButton("取消") { _, _ ->
+                finishWithError(EasyLocationError.LocationDisabled)
+            }
+            .setCancelable(false)
+            .show()
     }
     
     /**
