@@ -178,12 +178,14 @@ client.clearLocationCache()
 | `accuracy` | Float | 定位精度（米） |
 | `gpsType` | String | 定位类型：`gps`, `network`, `fused`, `unknown` |
 | `gpsPositionTime` | Long | 定位时间戳（毫秒，UTC） |
-| `gpsMillsOldWhenSaved` | Long | 保存时的数据年龄（毫秒） |
+| `gpsMillsOldWhenSaved` | Long | **每次读取时动态计算**，表示从定位点产生到当前读取时刻的时间（毫秒） |
+
+> **注意**：`gpsMillsOldWhenSaved` 会在每次调用 `getLastLocation()` 时重新计算，因此每次获取都会返回最新的数据年龄。
 
 ### 4.4 CachedLocation 方法
 | 方法 | 返回类型 | 说明 |
 |------|----------|------|
-| `getCurrentAgeMillis()` | Long | 获取当前数据年龄（毫秒） |
+| `getCurrentAgeMillis()` | Long | 获取当前数据年龄（毫秒），与 `gpsMillsOldWhenSaved` 等价 |
 | `isExpired(maxAgeMillis)` | Boolean | 检查数据是否过期 |
 
 ## 5. 状态查询

@@ -138,24 +138,34 @@ class LocationCacheManager private constructor(context: Context) {
     /**
      * 获取缓存的定位数据
      * 
+     * 注意: gpsMillsOldWhenSaved 会在每次获取时重新计算，
+     * 表示从定位点产生到当前读取时刻经过的时间（毫秒）
+     * 
      * @return 缓存的定位数据，如果没有缓存返回 null
      */
     fun getLastLocation(): CachedLocation? {
-        // 优先返回内存缓存
-        cachedLocation?.let { return it }
+        // 优先从内存缓存读取并更新 gpsMillsOldWhenSaved
+        cachedLocation?.let { cached ->
+            val currentAge = System.currentTimeMillis() - cached.gpsPositionTime
+            return cached.copy(gpsMillsOldWhenSaved = currentAge)
+        }
         
         // 从 SharedPreferences 读取
         val json = prefs.getString(KEY_CACHED_LOCATION, null) ?: return null
         
         return try {
             val jsonObject = JSONObject(json)
+            val gpsPositionTime = jsonObject.getLong("gps_position_time")
+            // 每次读取时重新计算 gpsMillsOldWhenSaved
+            val currentAge = System.currentTimeMillis() - gpsPositionTime
+            
             CachedLocation(
                 latitude = jsonObject.getDouble("latitude"),
                 longitude = jsonObject.getDouble("longitude"),
                 accuracy = jsonObject.getDouble("accuracy").toFloat(),
                 gpsType = jsonObject.getString("gps_type"),
-                gpsPositionTime = jsonObject.getLong("gps_position_time"),
-                gpsMillsOldWhenSaved = jsonObject.getLong("gps_mills_old_when_saved")
+                gpsPositionTime = gpsPositionTime,
+                gpsMillsOldWhenSaved = currentAge
             ).also { cachedLocation = it }
         } catch (e: Exception) {
             null
