@@ -530,6 +530,43 @@ class EasyLocationClient(activity: Activity) {
     fun clearLocationCache() {
         locationCacheManager.clearCache()
     }
+    
+    // ==================== 状态查询 ====================
+    
+    /**
+     * 检查是否有定位权限（模糊或精确）
+     */
+    fun hasLocationPermission(): Boolean {
+        return locationManager.hasLocationPermission()
+    }
+    
+    /**
+     * 检查是否有精确定位权限
+     */
+    fun hasFineLocationPermission(): Boolean {
+        return locationManager.hasFineLocationPermission()
+    }
+    
+    /**
+     * 检查 GMS (Google Play Services) 是否可用
+     */
+    fun isGmsAvailable(): Boolean {
+        return locationManager.isGmsAvailable()
+    }
+    
+    /**
+     * 检查 GPS 是否开启
+     */
+    fun isGpsEnabled(): Boolean {
+        return locationManager.isGpsEnabled()
+    }
+    
+    /**
+     * 检查是否有任何定位服务可用
+     */
+    fun isLocationServiceEnabled(): Boolean {
+        return locationManager.isLocationServiceEnabled()
+    }
 }
 
 /**

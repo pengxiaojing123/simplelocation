@@ -14,7 +14,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.iki.location.EasyLocationCallback;
 import com.iki.location.EasyLocationClient;
 import com.iki.location.EasyLocationError;
-import com.iki.location.SimpleLocationManager;
 import com.iki.location.callback.PermissionCallback;
 import com.iki.location.callback.SingleLocationCallback;
 import com.iki.location.model.CachedLocation;
@@ -34,7 +33,6 @@ public class LocationTestActivity extends AppCompatActivity {
 
     private static final String TAG = "mylocation";
 
-    private SimpleLocationManager locationManager;
     private EasyLocationClient easyLocationClient;
 
     private TextView tvLog;
@@ -50,7 +48,6 @@ public class LocationTestActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_location_test);
 
-        locationManager = SimpleLocationManager.getInstance(getApplicationContext());
         easyLocationClient = new EasyLocationClient(this);
 
         initViews();
@@ -192,10 +189,10 @@ public class LocationTestActivity extends AppCompatActivity {
     private void updateStatus() {
         TextView tvStatus = findViewById(R.id.tvStatus);
         StringBuilder sb = new StringBuilder();
-        sb.append("权限: ").append(locationManager.hasLocationPermission() ? "✅" : "❌");
-        sb.append(" | 精确权限: ").append(locationManager.hasFineLocationPermission() ? "✅" : "❌");
-        sb.append(" | GMS: ").append(locationManager.isGmsAvailable() ? "✅" : "❌");
-        sb.append(" | GPS: ").append(locationManager.isGpsEnabled() ? "✅" : "❌");
+        sb.append("权限: ").append(easyLocationClient.hasLocationPermission() ? "✅" : "❌");
+        sb.append(" | 精确权限: ").append(easyLocationClient.hasFineLocationPermission() ? "✅" : "❌");
+        sb.append(" | GMS: ").append(easyLocationClient.isGmsAvailable() ? "✅" : "❌");
+        sb.append(" | GPS: ").append(easyLocationClient.isGpsEnabled() ? "✅" : "❌");
         tvStatus.setText(sb.toString());
     }
 
@@ -218,7 +215,6 @@ public class LocationTestActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        locationManager.onRequestPermissionsResult(requestCode, permissions, grantResults);
         easyLocationClient.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
