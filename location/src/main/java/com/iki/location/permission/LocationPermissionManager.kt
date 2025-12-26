@@ -146,38 +146,44 @@ class LocationPermissionManager private constructor(private val context: Context
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
-        if (requestCode == REQUEST_CODE_LOCATION) {
-            val granted = mutableListOf<String>()
-            val denied = mutableListOf<String>()
-            
-            permissions.forEachIndexed { index, permission ->
-                if (grantResults.getOrNull(index) == PackageManager.PERMISSION_GRANTED) {
-                    granted.add(permission)
-                } else {
-                    denied.add(permission)
-                }
-            }
-            
-            // 只要有任意一个定位权限被授予就算成功
-            // 用户可以选择"模糊定位"只授予 COARSE 权限
-            if (granted.any { 
-                it == Manifest.permission.ACCESS_FINE_LOCATION || 
-                it == Manifest.permission.ACCESS_COARSE_LOCATION 
-            }) {
-                permissionCallback?.onPermissionGranted(granted)
+        if (requestCode != REQUEST_CODE_LOCATION) {
+            return
+        }
+        
+        // 获取并清除回调，防止重复调用
+        val callback = permissionCallback ?: return
+        permissionCallback = null
+        
+        val granted = mutableListOf<String>()
+        val denied = mutableListOf<String>()
+        
+        permissions.forEachIndexed { index, permission ->
+            if (grantResults.getOrNull(index) == PackageManager.PERMISSION_GRANTED) {
+                granted.add(permission)
             } else {
-                // 检测是否是永久拒绝
-                val activity = activityRef?.get()
-                val permanentlyDenied = if (activity != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    // 如果所有定位权限都不显示 rationale，说明是永久拒绝
-                    !activity.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION) &&
-                    !activity.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)
-                } else {
-                    false
-                }
-                
-                permissionCallback?.onPermissionDenied(denied, permanentlyDenied)
+                denied.add(permission)
             }
+        }
+        
+        // 只要有任意一个定位权限被授予就算成功
+        // 用户可以选择"模糊定位"只授予 COARSE 权限
+        if (granted.any { 
+            it == Manifest.permission.ACCESS_FINE_LOCATION || 
+            it == Manifest.permission.ACCESS_COARSE_LOCATION 
+        }) {
+            callback.onPermissionGranted(granted)
+        } else {
+            // 检测是否是永久拒绝
+            val activity = activityRef?.get()
+            val permanentlyDenied = if (activity != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                // 如果所有定位权限都不显示 rationale，说明是永久拒绝
+                !activity.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION) &&
+                !activity.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)
+            } else {
+                false
+            }
+            
+            callback.onPermissionDenied(denied, permanentlyDenied)
         }
     }
     
