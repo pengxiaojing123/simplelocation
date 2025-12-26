@@ -73,7 +73,7 @@ public class LocationTestActivity extends AppCompatActivity {
 
             // requireFineLocation = false: 接受模糊定位
             // timeoutMillis = 15000: 15秒超时
-            easyLocationClient.getLocation(this, false, 15000L, new EasyLocationCallback() {
+            easyLocationClient.getLocation(false, 15000L, new EasyLocationCallback() {
                 @Override
                 public void onSuccess(@NonNull LocationData location) {
                     long costTime = System.currentTimeMillis() - startTime;
@@ -111,7 +111,7 @@ public class LocationTestActivity extends AppCompatActivity {
 
             // requireFineLocation = true: 要求精确定位，模糊定位会报错
             // timeoutMillis = 15000: 15秒超时
-            easyLocationClient.getLocation(this, true, 15000L, new EasyLocationCallback() {
+            easyLocationClient.getLocation(true, 15000L, new EasyLocationCallback() {
                 @Override
                 public void onSuccess(@NonNull LocationData location) {
                     long costTime = System.currentTimeMillis() - startTime;

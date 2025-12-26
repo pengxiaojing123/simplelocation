@@ -28,11 +28,11 @@ import java.lang.ref.WeakReference
  * 
  * 使用示例:
  * ```java
- * // 获取单例
- * EasyLocationClient client = EasyLocationClient.getInstance(context);
+ * // 获取单例（传入 Activity）
+ * EasyLocationClient client = EasyLocationClient.getInstance(activity);
  * 
  * // 一键定位（使用默认配置）
- * client.getLocation(activity, new EasyLocationCallback() {
+ * client.getLocation(new EasyLocationCallback() {
  *     @Override
  *     public void onSuccess(LocationData location) {
  *         // 定位成功
@@ -46,14 +46,13 @@ import java.lang.ref.WeakReference
  * 
  * // 或者指定参数
  * client.getLocation(
- *     activity,
  *     true,   // requireFineLocation: 要求精确定位
  *     15000L, // timeoutMillis: 超时时间
  *     callback
  * );
  * ```
  */
-class EasyLocationClient private constructor(context: android.content.Context) {
+class EasyLocationClient private constructor(activity: Activity) {
     
     companion object {
         const val REQUEST_CODE_GMS_SETTINGS = 10086
@@ -67,19 +66,22 @@ class EasyLocationClient private constructor(context: android.content.Context) {
         /**
          * 获取 EasyLocationClient 单例
          * 
-         * @param context Context（会自动使用 ApplicationContext）
+         * @param activity Activity 实例，用于权限申请和显示对话框
          * @return EasyLocationClient 单例实例
          */
         @JvmStatic
-        fun getInstance(context: android.content.Context): EasyLocationClient {
-            return instance ?: synchronized(this) {
-                instance ?: EasyLocationClient(context.applicationContext).also { instance = it }
+        fun getInstance(activity: Activity): EasyLocationClient {
+            return instance?.also { 
+                // 更新 Activity 引用
+                it.activityRef = WeakReference(activity)
+            } ?: synchronized(this) {
+                instance ?: EasyLocationClient(activity).also { instance = it }
             }
         }
     }
     
-    private val context = context.applicationContext
-    private var activityRef: WeakReference<Activity>? = null
+    private val context = activity.applicationContext
+    private var activityRef: WeakReference<Activity> = WeakReference(activity)
     private val locationManager = SimpleLocationManager.getInstance(context)
     private val locationCacheManager = LocationCacheManager.getInstance(context)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -102,12 +104,10 @@ class EasyLocationClient private constructor(context: android.content.Context) {
      * - requireFineLocation = false（接受模糊定位）
      * - timeoutMillis = 30000（30秒超时）
      * 
-     * @param activity Activity 实例，用于权限申请和显示对话框
      * @param callback 回调
      */
-    fun getLocation(activity: Activity, callback: EasyLocationCallback) {
+    fun getLocation(callback: EasyLocationCallback) {
         getLocation(
-            activity = activity,
             requireFineLocation = false,
             timeoutMillis = DEFAULT_TIMEOUT_MILLIS,
             callback = callback
@@ -117,19 +117,18 @@ class EasyLocationClient private constructor(context: android.content.Context) {
     /**
      * 一键获取定位
      * 
-     * @param activity Activity 实例，用于权限申请和显示对话框
      * @param requireFineLocation 是否要求精确定位权限。
      *                            如果为 true，用户只授予模糊定位权限时会触发错误回调
      * @param timeoutMillis 定位超时时间（毫秒）
      * @param callback 回调
      */
     fun getLocation(
-        activity: Activity,
         requireFineLocation: Boolean,
         timeoutMillis: Long,
         callback: EasyLocationCallback
     ) {
-        if (activity.isFinishing || activity.isDestroyed) {
+        val activity = activityRef.get()
+        if (activity == null || activity.isFinishing || activity.isDestroyed) {
             LocationLogger.e( "[EasyLocation] Activity 已销毁")
             callback.onError(EasyLocationError.ActivityDestroyed)
             return
@@ -140,9 +139,6 @@ class EasyLocationClient private constructor(context: android.content.Context) {
             callback.onError(EasyLocationError.AlreadyProcessing)
             return
         }
-        
-        // 保存 Activity 引用
-        activityRef = WeakReference(activity)
         
         isProcessing = true
         currentCallback = callback
@@ -188,7 +184,7 @@ class EasyLocationClient private constructor(context: android.content.Context) {
             override fun onPermissionGranted(permissions: List<String>) {
                 LocationLogger.d( "[EasyLocation] ✅ 权限已授予: $permissions")
                 
-                val act = activityRef?.get()
+                val act = activityRef.get()
                 if (act != null && !act.isFinishing && !act.isDestroyed) {
                     checkGmsAccuracy(act)
                 } else {
@@ -199,7 +195,7 @@ class EasyLocationClient private constructor(context: android.content.Context) {
             override fun onPermissionDenied(deniedPermissions: List<String>, permanentlyDenied: Boolean) {
                 LocationLogger.e( "[EasyLocation] ❌ 权限被拒绝: $deniedPermissions, 永久拒绝: $permanentlyDenied")
                 if (permanentlyDenied) {
-                    val act = activityRef?.get()
+                    val act = activityRef.get()
                     if (act != null && !act.isFinishing && !act.isDestroyed) {
                         showPermissionSettingDialog(act)
                     } else {
@@ -241,7 +237,7 @@ class EasyLocationClient private constructor(context: android.content.Context) {
                 // 再次检查是否获得了精确权限
                 if (locationManager.hasFineLocationPermission()) {
                     LocationLogger.d("[EasyLocation] ✅ 已获得精确定位权限")
-                    val act = activityRef?.get()
+                    val act = activityRef.get()
                     if (act != null && !act.isFinishing && !act.isDestroyed) {
                         checkGmsAccuracy(act)
                     } else {
@@ -249,7 +245,7 @@ class EasyLocationClient private constructor(context: android.content.Context) {
                     }
                 } else {
                     // 授予了权限但不是精确权限（用户选择了模糊）
-                    val act = activityRef?.get()
+                    val act = activityRef.get()
                     if (act == null || act.isFinishing || act.isDestroyed) {
                         finishWithError(EasyLocationError.FineLocationRequired)
                         return
@@ -278,7 +274,7 @@ class EasyLocationClient private constructor(context: android.content.Context) {
                 LocationLogger.e("[EasyLocation] ❌ 权限被拒绝: $deniedPermissions, 永久拒绝: $permanentlyDenied, 耗时: ${elapsed}ms")
                 
                 if (permanentlyDenied) {
-                    val act = activityRef?.get()
+                    val act = activityRef.get()
                     if (act != null && !act.isFinishing && !act.isDestroyed) {
                         showPermissionSettingDialog(act)
                     } else {
@@ -361,7 +357,7 @@ class EasyLocationClient private constructor(context: android.content.Context) {
             
             override fun onLocationError(error: LocationError) {
                 if (error is LocationError.LocationDisabled) {
-                    val activity = activityRef?.get()
+                    val activity = activityRef.get()
                     if (activity != null && !activity.isFinishing && !activity.isDestroyed) {
                         LocationLogger.e( "[EasyLocation] ❌ 定位服务未开启")
                         showLocationSettingDialog(activity)
@@ -513,7 +509,7 @@ class EasyLocationClient private constructor(context: android.content.Context) {
      */
     fun destroy() {
         cancel()
-        activityRef?.clear()
+        activityRef.clear()
     }
     
     /**
