@@ -2,8 +2,8 @@ package com.iki.location
 
 import android.app.Activity
 import android.content.Context
-import android.util.Log
 import com.google.android.gms.common.api.ResolvableApiException
+import com.iki.location.util.LocationLogger
 import com.iki.location.callback.*
 import com.iki.location.model.LocationData
 import com.iki.location.model.LocationError
@@ -51,7 +51,6 @@ class SimpleLocationManager private constructor(
 ) : CoroutineScope {
     
     companion object {
-        private const val TAG = "mylocation"
         const val REQUEST_CHECK_SETTINGS = 10010
         
         @Volatile
@@ -262,14 +261,14 @@ class SimpleLocationManager private constructor(
     private suspend fun getLocationInternal(
         request: LocationRequest
     ): Result<LocationData> {
-        Log.d(TAG, "========== 开始定位 ==========")
-        Log.d(TAG, "定位配置: priority=${request.priority}, timeout=${request.timeoutMillis}ms")
+        LocationLogger.d( "========== 开始定位 ==========")
+        LocationLogger.d( "定位配置: priority=${request.priority}, timeout=${request.timeoutMillis}ms")
         
         val startTime = System.currentTimeMillis()
         
         // 首先尝试 GMS 定位
         if (isGmsAvailable()) {
-            Log.d(TAG, "[GMS] GMS可用，开始GMS定位...")
+            LocationLogger.d( "[GMS] GMS可用，开始GMS定位...")
             
             val gmsStartTime = System.currentTimeMillis()
             val gmsResult = gmsProvider.getLocation(request)
@@ -277,19 +276,19 @@ class SimpleLocationManager private constructor(
             
             if (gmsResult.isSuccess) {
                 val location = gmsResult.getOrNull()
-                Log.d(TAG, "[GMS] ✅ GMS定位成功! 耗时: ${gmsCostTime}ms")
-                Log.d(TAG, "[GMS] 位置: lat=${location?.latitude}, lng=${location?.longitude}, accuracy=${location?.accuracy}m")
+                LocationLogger.d( "[GMS] ✅ GMS定位成功! 耗时: ${gmsCostTime}ms")
+                LocationLogger.d( "[GMS] 位置: lat=${location?.latitude}, lng=${location?.longitude}, accuracy=${location?.accuracy}m")
                 return gmsResult
             }
             
-            Log.w(TAG, "[GMS] ❌ GMS定位失败! 耗时: ${gmsCostTime}ms, 错误: ${gmsResult.exceptionOrNull()?.message}")
+            LocationLogger.w( "[GMS] ❌ GMS定位失败! 耗时: ${gmsCostTime}ms, 错误: ${gmsResult.exceptionOrNull()?.message}")
         } else {
-            Log.d(TAG, "[GMS] GMS不可用 (errorCode=${gmsProvider.getGmsAvailabilityErrorCode()})，直接使用GPS/WiFi")
+            LocationLogger.d( "[GMS] GMS不可用 (errorCode=${gmsProvider.getGmsAvailabilityErrorCode()})，直接使用GPS/WiFi")
         }
         
         // GMS 失败或不可用，尝试 GPS/WiFi 定位
-        Log.d(TAG, "[GPS] 开始GPS/WiFi定位...")
-        Log.d(TAG, "[GPS] GPS开启: ${gpsProvider.isGpsEnabled()}, 网络定位开启: ${gpsProvider.isNetworkLocationEnabled()}")
+        LocationLogger.d( "[GPS] 开始GPS/WiFi定位...")
+        LocationLogger.d( "[GPS] GPS开启: ${gpsProvider.isGpsEnabled()}, 网络定位开启: ${gpsProvider.isNetworkLocationEnabled()}")
         
         val gpsStartTime = System.currentTimeMillis()
         val gpsResult = gpsProvider.getLocation(request)
@@ -297,14 +296,14 @@ class SimpleLocationManager private constructor(
         
         if (gpsResult.isSuccess) {
             val location = gpsResult.getOrNull()
-            Log.d(TAG, "[GPS] ✅ GPS/WiFi定位成功! 耗时: ${gpsCostTime}ms")
-            Log.d(TAG, "[GPS] 位置: lat=${location?.latitude}, lng=${location?.longitude}, accuracy=${location?.accuracy}m")
+            LocationLogger.d( "[GPS] ✅ GPS/WiFi定位成功! 耗时: ${gpsCostTime}ms")
+            LocationLogger.d( "[GPS] 位置: lat=${location?.latitude}, lng=${location?.longitude}, accuracy=${location?.accuracy}m")
         } else {
-            Log.e(TAG, "[GPS] ❌ GPS/WiFi定位也失败! 耗时: ${gpsCostTime}ms, 错误: ${gpsResult.exceptionOrNull()?.message}")
+            LocationLogger.e( "[GPS] ❌ GPS/WiFi定位也失败! 耗时: ${gpsCostTime}ms, 错误: ${gpsResult.exceptionOrNull()?.message}")
         }
         
         val totalTime = System.currentTimeMillis() - startTime
-        Log.d(TAG, "========== 定位结束 (总耗时: ${totalTime}ms) ==========")
+        LocationLogger.d( "========== 定位结束 (总耗时: ${totalTime}ms) ==========")
         
         return gpsResult
     }
@@ -354,7 +353,7 @@ class SimpleLocationManager private constructor(
                 try {
                     exception.startResolutionForResult(activity, requestCode)
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to start resolution", e)
+                    LocationLogger.e( "Failed to start resolution", e)
                 }
             }
         }

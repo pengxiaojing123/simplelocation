@@ -2,8 +2,8 @@ package com.iki.location
 
 import android.app.Activity
 import android.content.Intent
-import android.util.Log
 import com.iki.location.callback.PermissionCallback
+import com.iki.location.util.LocationLogger
 import com.iki.location.callback.SingleLocationCallback
 import com.iki.location.model.LocationData
 import com.iki.location.model.LocationError
@@ -52,7 +52,6 @@ import java.lang.ref.WeakReference
 class EasyLocationClient(activity: Activity) {
     
     companion object {
-        private const val TAG = "mylocation"
         const val REQUEST_CODE_GMS_SETTINGS = 10086
         
         /** 默认超时时间 30 秒 */
@@ -100,13 +99,13 @@ class EasyLocationClient(activity: Activity) {
     ) {
         val activity = activityRef.get()
         if (activity == null || activity.isFinishing || activity.isDestroyed) {
-            Log.e(TAG, "[EasyLocation] Activity 已销毁")
+            LocationLogger.e( "[EasyLocation] Activity 已销毁")
             callback.onError(EasyLocationError.ActivityDestroyed)
             return
         }
         
         if (isProcessing) {
-            Log.w(TAG, "[EasyLocation] 已有定位请求在处理中")
+            LocationLogger.w( "[EasyLocation] 已有定位请求在处理中")
             callback.onError(EasyLocationError.AlreadyProcessing)
             return
         }
@@ -116,8 +115,8 @@ class EasyLocationClient(activity: Activity) {
         this.requireFineLocation = requireFineLocation
         this.timeoutMillis = timeoutMillis
         
-        Log.d(TAG, "[EasyLocation] ========== 开始一键定位流程 ==========")
-        Log.d(TAG, "[EasyLocation] 配置: requireFineLocation=$requireFineLocation, timeoutMillis=$timeoutMillis")
+        LocationLogger.d( "[EasyLocation] ========== 开始一键定位流程 ==========")
+        LocationLogger.d( "[EasyLocation] 配置: requireFineLocation=$requireFineLocation, timeoutMillis=$timeoutMillis")
         
         // Step 1: 检查权限
         checkAndRequestPermission(activity)
@@ -127,33 +126,33 @@ class EasyLocationClient(activity: Activity) {
      * Step 1: 检查并申请权限
      */
     private fun checkAndRequestPermission(activity: Activity) {
-        Log.d(TAG, "[EasyLocation] Step 1: 检查定位权限")
+        LocationLogger.d( "[EasyLocation] Step 1: 检查定位权限")
         
         // 如果需要精确定位，检查是否已有精确权限
         if (requireFineLocation) {
             if (locationManager.hasFineLocationPermission()) {
-                Log.d(TAG, "[EasyLocation] 已有精确定位权限")
+                LocationLogger.d( "[EasyLocation] 已有精确定位权限")
                 checkGmsAccuracy(activity)
                 return
             }
             
             // 没有精确权限，需要申请
-            Log.d(TAG, "[EasyLocation] 需要精确定位权限，开始申请...")
+            LocationLogger.d( "[EasyLocation] 需要精确定位权限，开始申请...")
             requestFineLocationPermission(activity)
             return
         }
         
         // 不要求精确定位，只需要任意定位权限
         if (locationManager.hasLocationPermission()) {
-            Log.d(TAG, "[EasyLocation] 已有定位权限")
+            LocationLogger.d( "[EasyLocation] 已有定位权限")
             checkGmsAccuracy(activity)
             return
         }
         
-        Log.d(TAG, "[EasyLocation] 申请定位权限...")
+        LocationLogger.d( "[EasyLocation] 申请定位权限...")
         locationManager.requestLocationPermission(activity, object : PermissionCallback {
             override fun onPermissionGranted(permissions: List<String>) {
-                Log.d(TAG, "[EasyLocation] ✅ 权限已授予: $permissions")
+                LocationLogger.d( "[EasyLocation] ✅ 权限已授予: $permissions")
                 
                 val act = activityRef.get()
                 if (act != null && !act.isFinishing && !act.isDestroyed) {
@@ -164,7 +163,7 @@ class EasyLocationClient(activity: Activity) {
             }
             
             override fun onPermissionDenied(deniedPermissions: List<String>, permanentlyDenied: Boolean) {
-                Log.e(TAG, "[EasyLocation] ❌ 权限被拒绝: $deniedPermissions, 永久拒绝: $permanentlyDenied")
+                LocationLogger.e( "[EasyLocation] ❌ 权限被拒绝: $deniedPermissions, 永久拒绝: $permanentlyDenied")
                 if (permanentlyDenied) {
                     val act = activityRef.get()
                     if (act != null && !act.isFinishing && !act.isDestroyed) {
@@ -192,16 +191,16 @@ class EasyLocationClient(activity: Activity) {
                             !locationManager.hasFineLocationPermission()
         
         if (hasCoarseOnly) {
-            Log.d(TAG, "[EasyLocation] 用户已有模糊权限，尝试申请精确权限...")
+            LocationLogger.d( "[EasyLocation] 用户已有模糊权限，尝试申请精确权限...")
         }
         
         locationManager.requestLocationPermission(activity, object : PermissionCallback {
             override fun onPermissionGranted(permissions: List<String>) {
-                Log.d(TAG, "[EasyLocation] ✅ 权限已授予: $permissions")
+                LocationLogger.d( "[EasyLocation] ✅ 权限已授予: $permissions")
                 
                 // 再次检查是否获得了精确权限
                 if (locationManager.hasFineLocationPermission()) {
-                    Log.d(TAG, "[EasyLocation] ✅ 已获得精确定位权限")
+                    LocationLogger.d( "[EasyLocation] ✅ 已获得精确定位权限")
                     val act = activityRef.get()
                     if (act != null && !act.isFinishing && !act.isDestroyed) {
                         checkGmsAccuracy(act)
@@ -210,18 +209,18 @@ class EasyLocationClient(activity: Activity) {
                     }
                 } else {
                     // 授予了权限但不是精确权限（用户选择了模糊）
-                    Log.e(TAG, "[EasyLocation] ❌ 用户选择了模糊定位，需要精确定位")
+                    LocationLogger.e( "[EasyLocation] ❌ 用户选择了模糊定位，需要精确定位")
                     finishWithError(EasyLocationError.FineLocationRequired)
                 }
             }
             
             override fun onPermissionDenied(deniedPermissions: List<String>, permanentlyDenied: Boolean) {
-                Log.e(TAG, "[EasyLocation] ❌ 权限被拒绝: $deniedPermissions, 永久拒绝: $permanentlyDenied")
+                LocationLogger.e( "[EasyLocation] ❌ 权限被拒绝: $deniedPermissions, 永久拒绝: $permanentlyDenied")
                 
                 // 如果之前已有模糊权限，但系统没有弹窗让用户选择精确权限
                 // 这种情况下需要引导用户去设置
                 if (hasCoarseOnly && locationManager.hasLocationPermission()) {
-                    Log.e(TAG, "[EasyLocation] ❌ 用户已有模糊权限，需要去设置中修改为精确权限")
+                    LocationLogger.e( "[EasyLocation] ❌ 用户已有模糊权限，需要去设置中修改为精确权限")
                     finishWithError(EasyLocationError.FineLocationRequired)
                 } else if (permanentlyDenied) {
                     val act = activityRef.get()
@@ -241,11 +240,11 @@ class EasyLocationClient(activity: Activity) {
      * Step 2: 检查 GMS 精确定位开关
      */
     private fun checkGmsAccuracy(activity: Activity) {
-        Log.d(TAG, "[EasyLocation] Step 2: 检查 GMS 精确定位开关")
+        LocationLogger.d( "[EasyLocation] Step 2: 检查 GMS 精确定位开关")
         
         // 检查 GMS 是否可用
         if (!locationManager.isGmsAvailable()) {
-            Log.d(TAG, "[EasyLocation] GMS 不可用，跳过精确定位检查")
+            LocationLogger.d( "[EasyLocation] GMS 不可用，跳过精确定位检查")
             startLocation()
             return
         }
@@ -259,28 +258,28 @@ class EasyLocationClient(activity: Activity) {
         scope.launch {
             when (val result = locationManager.checkLocationSettings(request)) {
                 is SimpleLocationManager.LocationSettingsResult.Satisfied -> {
-                    Log.d(TAG, "[EasyLocation] ✅ GMS 位置设置满足要求")
+                    LocationLogger.d( "[EasyLocation] ✅ GMS 位置设置满足要求")
                     startLocation()
                 }
                 
                 is SimpleLocationManager.LocationSettingsResult.Resolvable -> {
-                    Log.d(TAG, "[EasyLocation] GMS 位置设置需要用户确认，弹出对话框...")
+                    LocationLogger.d( "[EasyLocation] GMS 位置设置需要用户确认，弹出对话框...")
                     try {
                         result.exception.startResolutionForResult(activity, REQUEST_CODE_GMS_SETTINGS)
                     } catch (e: Exception) {
-                        Log.e(TAG, "[EasyLocation] 无法弹出 GMS 设置对话框", e)
+                        LocationLogger.e( "[EasyLocation] 无法弹出 GMS 设置对话框", e)
                         // 即使无法弹出对话框，也尝试定位
                         startLocation()
                     }
                 }
                 
                 is SimpleLocationManager.LocationSettingsResult.PermissionRequired -> {
-                    Log.e(TAG, "[EasyLocation] ❌ 需要权限（不应该到达这里）")
+                    LocationLogger.e( "[EasyLocation] ❌ 需要权限（不应该到达这里）")
                     finishWithError(EasyLocationError.PermissionDenied)
                 }
                 
                 is SimpleLocationManager.LocationSettingsResult.LocationDisabled -> {
-                    Log.e(TAG, "[EasyLocation] ❌ 定位服务未开启")
+                    LocationLogger.e( "[EasyLocation] ❌ 定位服务未开启")
                     showLocationSettingDialog(activity)
                 }
             }
@@ -291,7 +290,7 @@ class EasyLocationClient(activity: Activity) {
      * Step 3: 执行定位
      */
     private fun startLocation() {
-        Log.d(TAG, "[EasyLocation] Step 3: 开始定位")
+        LocationLogger.d( "[EasyLocation] Step 3: 开始定位")
         
         // 内部固定使用 HIGH_ACCURACY
         val request = LocationRequest(
@@ -301,7 +300,7 @@ class EasyLocationClient(activity: Activity) {
         
         locationManager.getLocation(request, object : SingleLocationCallback {
             override fun onLocationSuccess(location: LocationData) {
-                Log.d(TAG, "[EasyLocation] ✅ 定位成功: ${location.provider}, (${location.latitude}, ${location.longitude})")
+                LocationLogger.d( "[EasyLocation] ✅ 定位成功: ${location.provider}, (${location.latitude}, ${location.longitude})")
                 finishWithSuccess(location)
             }
             
@@ -309,13 +308,13 @@ class EasyLocationClient(activity: Activity) {
                 if (error is LocationError.LocationDisabled) {
                     val activity = activityRef.get()
                     if (activity != null && !activity.isFinishing && !activity.isDestroyed) {
-                        Log.e(TAG, "[EasyLocation] ❌ 定位服务未开启")
+                        LocationLogger.e( "[EasyLocation] ❌ 定位服务未开启")
                         showLocationSettingDialog(activity)
                         return
                     }
                 }
                 
-                Log.e(TAG, "[EasyLocation] ❌ 定位失败: ${error.message}")
+                LocationLogger.e( "[EasyLocation] ❌ 定位失败: ${error.message}")
                 finishWithError(EasyLocationError.LocationFailed(error))
             }
         })
@@ -361,7 +360,7 @@ class EasyLocationClient(activity: Activity) {
      * 完成 - 成功
      */
     private fun finishWithSuccess(location: LocationData) {
-        Log.d(TAG, "[EasyLocation] ========== 一键定位流程完成 (成功) ==========")
+        LocationLogger.d( "[EasyLocation] ========== 一键定位流程完成 (成功) ==========")
         isProcessing = false
         currentCallback?.onSuccess(location)
         currentCallback = null
@@ -371,7 +370,7 @@ class EasyLocationClient(activity: Activity) {
      * 完成 - 失败
      */
     private fun finishWithError(error: EasyLocationError) {
-        Log.e(TAG, "[EasyLocation] ========== 一键定位流程完成 (失败: ${error.message}) ==========")
+        LocationLogger.e( "[EasyLocation] ========== 一键定位流程完成 (失败: ${error.message}) ==========")
         isProcessing = false
         currentCallback?.onError(error)
         currentCallback = null
@@ -398,12 +397,12 @@ class EasyLocationClient(activity: Activity) {
     fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         when (requestCode) {
             REQUEST_CODE_GMS_SETTINGS -> {
-                Log.d(TAG, "[EasyLocation] GMS 设置对话框结果: resultCode=$resultCode")
+                LocationLogger.d( "[EasyLocation] GMS 设置对话框结果: resultCode=$resultCode")
                 if (resultCode == Activity.RESULT_OK) {
-                    Log.d(TAG, "[EasyLocation] ✅ 用户同意开启精确定位")
+                    LocationLogger.d( "[EasyLocation] ✅ 用户同意开启精确定位")
                     startLocation()
                 } else {
-                    Log.w(TAG, "[EasyLocation] ❌ 用户拒绝开启精确定位")
+                    LocationLogger.w( "[EasyLocation] ❌ 用户拒绝开启精确定位")
                     finishWithError(EasyLocationError.GmsAccuracyDenied)
                 }
             }
@@ -415,7 +414,7 @@ class EasyLocationClient(activity: Activity) {
      */
     fun cancel() {
         if (isProcessing) {
-            Log.d(TAG, "[EasyLocation] 取消定位请求")
+            LocationLogger.d( "[EasyLocation] 取消定位请求")
             isProcessing = false
             currentCallback = null
             locationManager.cancel()

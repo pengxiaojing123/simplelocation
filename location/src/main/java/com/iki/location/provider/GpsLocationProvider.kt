@@ -8,8 +8,8 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Looper
-import android.util.Log
 import com.iki.location.model.LocationData
+import com.iki.location.util.LocationLogger
 import com.iki.location.model.LocationError
 import com.iki.location.model.LocationProvider
 import com.iki.location.model.LocationRequest
@@ -23,10 +23,6 @@ import kotlin.coroutines.resume
  * 作为 GMS 定位失败时的备选方案
  */
 class GpsLocationProvider(private val context: Context) {
-    
-    companion object {
-        private const val TAG = "mylocation"
-    }
     
     private val locationManager: LocationManager by lazy {
         context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -42,7 +38,7 @@ class GpsLocationProvider(private val context: Context) {
         return try {
             locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
         } catch (e: Exception) {
-            Log.e(TAG, "[GPS-Provider] Error checking GPS status", e)
+            LocationLogger.e( "[GPS-Provider] Error checking GPS status", e)
             false
         }
     }
@@ -54,7 +50,7 @@ class GpsLocationProvider(private val context: Context) {
         return try {
             locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
         } catch (e: Exception) {
-            Log.e(TAG, "[GPS-Provider] Error checking network location status", e)
+            LocationLogger.e( "[GPS-Provider] Error checking network location status", e)
             false
         }
     }
@@ -73,11 +69,11 @@ class GpsLocationProvider(private val context: Context) {
     suspend fun getLocation(
         request: LocationRequest
     ): Result<LocationData> = withContext(Dispatchers.Main) {
-        Log.d(TAG, "[GPS-Provider] getLocation() 开始")
-        Log.d(TAG, "[GPS-Provider] GPS开启: ${isGpsEnabled()}, 网络定位开启(WiFi): ${isNetworkLocationEnabled()}")
+        LocationLogger.d( "[GPS-Provider] getLocation() 开始")
+        LocationLogger.d( "[GPS-Provider] GPS开启: ${isGpsEnabled()}, 网络定位开启(WiFi): ${isNetworkLocationEnabled()}")
         
         if (!isAnyProviderEnabled()) {
-            Log.e(TAG, "[GPS-Provider] 没有可用的定位提供者")
+            LocationLogger.e( "[GPS-Provider] 没有可用的定位提供者")
             return@withContext Result.failure(
                 Exception(LocationError.LocationDisabled().message)
             )
@@ -86,7 +82,7 @@ class GpsLocationProvider(private val context: Context) {
         // HIGH_ACCURACY 模式：同时使用 GPS 和网络定位(WiFi)，取先返回的
         if (request.priority == LocationRequest.Priority.HIGH_ACCURACY && 
             isGpsEnabled() && isNetworkLocationEnabled()) {
-            Log.d(TAG, "[GPS-Provider] HIGH_ACCURACY模式: 同时请求GPS和网络定位(WiFi)")
+            LocationLogger.d( "[GPS-Provider] HIGH_ACCURACY模式: 同时请求GPS和网络定位(WiFi)")
             return@withContext getLocationFromMultipleProviders(request)
         }
         
@@ -101,7 +97,7 @@ class GpsLocationProvider(private val context: Context) {
             )
         }
         
-        Log.d(TAG, "[GPS-Provider] 单Provider模式: $provider")
+        LocationLogger.d( "[GPS-Provider] 单Provider模式: $provider")
         return@withContext getLocationFromSingleProvider(provider, request)
     }
     
@@ -121,8 +117,8 @@ class GpsLocationProvider(private val context: Context) {
                 if (!hasResumed) {
                     hasResumed = true
                     val costTime = System.currentTimeMillis() - startTime
-                    Log.d(TAG, "[GPS-Provider] ✅ 收到位置! provider=$providerName, 耗时: ${costTime}ms")
-                    Log.d(TAG, "[GPS-Provider] 位置: lat=${location.latitude}, lng=${location.longitude}, accuracy=${location.accuracy}m")
+                    LocationLogger.d( "[GPS-Provider] ✅ 收到位置! provider=$providerName, 耗时: ${costTime}ms")
+                    LocationLogger.d( "[GPS-Provider] 位置: lat=${location.latitude}, lng=${location.longitude}, accuracy=${location.accuracy}m")
                     
                     timeoutJob?.cancel()
                     clearListeners()
@@ -157,25 +153,25 @@ class GpsLocationProvider(private val context: Context) {
             currentListeners.add(networkListener)
             
             // 设置超时
-            Log.d(TAG, "[GPS-Provider] 设置超时: ${request.timeoutMillis}ms")
+            LocationLogger.d( "[GPS-Provider] 设置超时: ${request.timeoutMillis}ms")
             timeoutJob = CoroutineScope(Dispatchers.Main).launch {
                 delay(request.timeoutMillis)
                 if (!hasResumed) {
                     val costTime = System.currentTimeMillis() - startTime
-                    Log.w(TAG, "[GPS-Provider] ⏰ 超时! 已等待: ${costTime}ms")
+                    LocationLogger.w( "[GPS-Provider] ⏰ 超时! 已等待: ${costTime}ms")
                     hasResumed = true
                     clearListeners()
                     
-                    Log.e(TAG, "[GPS-Provider] ❌ 超时")
+                    LocationLogger.e( "[GPS-Provider] ❌ 超时")
                     continuation.resume(Result.failure(Exception(LocationError.Timeout().message)))
                 }
             }
             
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    Log.d(TAG, "[GPS-Provider] Android R+, 使用 getCurrentLocation API")
+                    LocationLogger.d( "[GPS-Provider] Android R+, 使用 getCurrentLocation API")
                     
-                    Log.d(TAG, "[GPS-Provider] 请求 GPS...")
+                    LocationLogger.d( "[GPS-Provider] 请求 GPS...")
                     locationManager.getCurrentLocation(
                         LocationManager.GPS_PROVIDER,
                         null,
@@ -184,11 +180,11 @@ class GpsLocationProvider(private val context: Context) {
                         if (location != null) {
                             onLocationReceived(location, LocationManager.GPS_PROVIDER)
                         } else {
-                            Log.d(TAG, "[GPS-Provider] GPS getCurrentLocation 返回 null")
+                            LocationLogger.d( "[GPS-Provider] GPS getCurrentLocation 返回 null")
                         }
                     }
                     
-                    Log.d(TAG, "[GPS-Provider] 请求网络定位(WiFi)...")
+                    LocationLogger.d( "[GPS-Provider] 请求网络定位(WiFi)...")
                     locationManager.getCurrentLocation(
                         LocationManager.NETWORK_PROVIDER,
                         null,
@@ -197,11 +193,11 @@ class GpsLocationProvider(private val context: Context) {
                         if (location != null) {
                             onLocationReceived(location, LocationManager.NETWORK_PROVIDER)
                         } else {
-                            Log.d(TAG, "[GPS-Provider] Network getCurrentLocation 返回 null")
+                            LocationLogger.d( "[GPS-Provider] Network getCurrentLocation 返回 null")
                         }
                     }
                 } else {
-                    Log.d(TAG, "[GPS-Provider] Android < R, 使用 requestSingleUpdate API")
+                    LocationLogger.d( "[GPS-Provider] Android < R, 使用 requestSingleUpdate API")
                     
                     @Suppress("DEPRECATION")
                     locationManager.requestSingleUpdate(LocationManager.GPS_PROVIDER, gpsListener, Looper.getMainLooper())
@@ -209,7 +205,7 @@ class GpsLocationProvider(private val context: Context) {
                     locationManager.requestSingleUpdate(LocationManager.NETWORK_PROVIDER, networkListener, Looper.getMainLooper())
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "[GPS-Provider] 请求定位异常", e)
+                LocationLogger.e( "[GPS-Provider] 请求定位异常", e)
                 if (!hasResumed) {
                     hasResumed = true
                     timeoutJob?.cancel()
@@ -236,7 +232,7 @@ class GpsLocationProvider(private val context: Context) {
         provider: String,
         request: LocationRequest
     ): Result<LocationData> = withContext(Dispatchers.Main) {
-        Log.d(TAG, "[GPS-Provider] 使用provider: $provider, timeout: ${request.timeoutMillis}ms")
+        LocationLogger.d( "[GPS-Provider] 使用provider: $provider, timeout: ${request.timeoutMillis}ms")
         
         val startTime = System.currentTimeMillis()
         
@@ -246,8 +242,8 @@ class GpsLocationProvider(private val context: Context) {
             val listener = object : LocationListener {
                 override fun onLocationChanged(location: Location) {
                     val costTime = System.currentTimeMillis() - startTime
-                    Log.d(TAG, "[GPS-Provider] onLocationChanged! 耗时: ${costTime}ms")
-                    Log.d(TAG, "[GPS-Provider] 位置: lat=${location.latitude}, lng=${location.longitude}, accuracy=${location.accuracy}m")
+                    LocationLogger.d( "[GPS-Provider] onLocationChanged! 耗时: ${costTime}ms")
+                    LocationLogger.d( "[GPS-Provider] 位置: lat=${location.latitude}, lng=${location.longitude}, accuracy=${location.accuracy}m")
                     if (!hasResumed) {
                         hasResumed = true
                         timeoutJob?.cancel()
@@ -262,7 +258,7 @@ class GpsLocationProvider(private val context: Context) {
                 override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
                 override fun onProviderEnabled(provider: String) {}
                 override fun onProviderDisabled(provider: String) {
-                    Log.w(TAG, "[GPS-Provider] Provider disabled: $provider")
+                    LocationLogger.w( "[GPS-Provider] Provider disabled: $provider")
                     if (!hasResumed) {
                         hasResumed = true
                         timeoutJob?.cancel()
@@ -278,7 +274,7 @@ class GpsLocationProvider(private val context: Context) {
             timeoutJob = CoroutineScope(Dispatchers.Main).launch {
                 delay(request.timeoutMillis)
                 if (!hasResumed) {
-                    Log.w(TAG, "[GPS-Provider] ⏰ 超时!")
+                    LocationLogger.w( "[GPS-Provider] ⏰ 超时!")
                     hasResumed = true
                     removeListener(listener)
                     
@@ -302,7 +298,7 @@ class GpsLocationProvider(private val context: Context) {
                     locationManager.requestSingleUpdate(provider, listener, Looper.getMainLooper())
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "[GPS-Provider] 请求定位异常", e)
+                LocationLogger.e( "[GPS-Provider] 请求定位异常", e)
                 if (!hasResumed) {
                     hasResumed = true
                     timeoutJob?.cancel()
@@ -338,7 +334,7 @@ class GpsLocationProvider(private val context: Context) {
                         }
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "[GPS-Provider] Error getting last known location from $p", e)
+                    LocationLogger.e( "[GPS-Provider] Error getting last known location from $p", e)
                 }
             }
             
@@ -351,7 +347,7 @@ class GpsLocationProvider(private val context: Context) {
                 LocationData.fromLocation(location, providerType)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "[GPS-Provider] Error getting last known location", e)
+            LocationLogger.e( "[GPS-Provider] Error getting last known location", e)
             null
         }
     }
@@ -374,7 +370,7 @@ class GpsLocationProvider(private val context: Context) {
         try {
             locationManager.removeUpdates(listener)
         } catch (e: Exception) {
-            Log.e(TAG, "[GPS-Provider] Error removing location listener", e)
+            LocationLogger.e( "[GPS-Provider] Error removing location listener", e)
         }
     }
 }

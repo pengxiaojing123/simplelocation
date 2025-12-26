@@ -4,7 +4,6 @@ import android.content.Context
 import android.location.LocationManager
 import android.os.Build
 import android.provider.Settings
-import android.util.Log
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.location.LocationServices
@@ -22,8 +21,6 @@ import kotlin.coroutines.resume
  * 提供设备定位相关状态的全面检测能力
  */
 object LocationServiceChecker {
-    
-    private const val TAG = "LocationServiceChecker"
     
     /**
      * 获取完整的定位服务状态
@@ -70,7 +67,7 @@ object LocationServiceChecker {
                 }
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Error checking GMS status", e)
+            LocationLogger.e( "Error checking GMS status", e)
             GmsStatus(
                 isAvailable = false,
                 version = -1,
@@ -177,7 +174,7 @@ object LocationServiceChecker {
                         val isAccuracyEnabled = states?.isNetworkLocationUsable == true &&
                                 states.isLocationUsable == true
                         
-                        Log.d(TAG, "Google Location Accuracy check - " +
+                        LocationLogger.d( "Google Location Accuracy check - " +
                                 "GPS: ${states?.isGpsUsable}, " +
                                 "Network: ${states?.isNetworkLocationUsable}, " +
                                 "BLE: ${states?.isBleUsable}, " +
@@ -188,14 +185,14 @@ object LocationServiceChecker {
                         }
                     }
                     .addOnFailureListener { exception ->
-                        Log.w(TAG, "Failed to check Google Location Accuracy", exception)
+                        LocationLogger.e("Failed to check Google Location Accuracy", exception)
                         if (continuation.isActive) {
                             continuation.resume(false)
                         }
                     }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error checking Google Location Accuracy", e)
+            LocationLogger.e( "Error checking Google Location Accuracy", e)
             false
         }
     }
@@ -229,7 +226,7 @@ object LocationServiceChecker {
                 )
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting location mode", e)
+            LocationLogger.e( "Error getting location mode", e)
             Settings.Secure.LOCATION_MODE_OFF
         }
     }

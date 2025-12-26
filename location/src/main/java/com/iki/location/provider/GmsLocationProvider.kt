@@ -3,8 +3,8 @@ package com.iki.location.provider
 import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Location
-import android.util.Log
 import com.google.android.gms.common.ConnectionResult
+import com.iki.location.util.LocationLogger
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
@@ -27,10 +27,6 @@ import kotlin.coroutines.resumeWithException
  */
 class GmsLocationProvider(private val context: Context) {
     
-    companion object {
-        private const val TAG = "mylocation"
-    }
-    
     private val fusedLocationClient: FusedLocationProviderClient by lazy {
         LocationServices.getFusedLocationProviderClient(context)
     }
@@ -50,7 +46,7 @@ class GmsLocationProvider(private val context: Context) {
             val resultCode = apiAvailability.isGooglePlayServicesAvailable(context)
             resultCode == ConnectionResult.SUCCESS
         } catch (e: Exception) {
-            Log.e(TAG, "Error checking GMS availability", e)
+            LocationLogger.e( "Error checking GMS availability", e)
             false
         }
     }
@@ -92,21 +88,21 @@ class GmsLocationProvider(private val context: Context) {
                         val isLocationUsable = locationSettingsStates?.isLocationUsable == true
                         val isAccuracyEnabled = isLocationUsable && isNetworkLocationUsable
                         
-                        Log.d(TAG, "Location accuracy check - Network: $isNetworkLocationUsable, Location: $isLocationUsable")
+                        LocationLogger.d( "Location accuracy check - Network: $isNetworkLocationUsable, Location: $isLocationUsable")
                         
                         if (continuation.isActive) {
                             continuation.resume(isAccuracyEnabled)
                         }
                     }
                     .addOnFailureListener { exception ->
-                        Log.w(TAG, "Failed to check location accuracy", exception)
+                        LocationLogger.e("Failed to check location accuracy", exception)
                         if (continuation.isActive) {
                             continuation.resume(false)
                         }
                     }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error checking Google Location Accuracy", e)
+            LocationLogger.e( "Error checking Google Location Accuracy", e)
             false
         }
     }
@@ -162,10 +158,10 @@ class GmsLocationProvider(private val context: Context) {
     suspend fun getLocation(
         request: SimpleLocationRequest
     ): Result<LocationData> = withContext(Dispatchers.Main) {
-        Log.d(TAG, "[GMS-Provider] getLocation() 开始")
+        LocationLogger.d( "[GMS-Provider] getLocation() 开始")
         
         if (!isGmsAvailable()) {
-            Log.e(TAG, "[GMS-Provider] GMS不可用，返回失败")
+            LocationLogger.e( "[GMS-Provider] GMS不可用，返回失败")
             return@withContext Result.failure(
                 Exception(LocationError.GmsUnavailable().message)
             )
@@ -180,7 +176,7 @@ class GmsLocationProvider(private val context: Context) {
                 SimpleLocationRequest.Priority.LOW_POWER -> Priority.PRIORITY_LOW_POWER
             }
             
-            Log.d(TAG, "[GMS-Provider] 调用 fusedLocationClient.getCurrentLocation(priority=$priority)...")
+            LocationLogger.d( "[GMS-Provider] 调用 fusedLocationClient.getCurrentLocation(priority=$priority)...")
             val startTime = System.currentTimeMillis()
             
             // 构建 CurrentLocationRequest，强制要求最新位置 (MaxUpdateAgeMillis = 0)
@@ -195,38 +191,38 @@ class GmsLocationProvider(private val context: Context) {
                     cancellationTokenSource!!.token
                 ).addOnSuccessListener { location ->
                     val costTime = System.currentTimeMillis() - startTime
-                    Log.d(TAG, "[GMS-Provider] getCurrentLocation onSuccess, 耗时: ${costTime}ms, location=$location")
+                    LocationLogger.d( "[GMS-Provider] getCurrentLocation onSuccess, 耗时: ${costTime}ms, location=$location")
                     if (location != null) {
-                        Log.d(TAG, "[GMS-Provider] 位置: lat=${location.latitude}, lng=${location.longitude}, accuracy=${location.accuracy}m")
+                        LocationLogger.d( "[GMS-Provider] 位置: lat=${location.latitude}, lng=${location.longitude}, accuracy=${location.accuracy}m")
                     } else {
-                        Log.w(TAG, "[GMS-Provider] getCurrentLocation返回null")
+                        LocationLogger.w( "[GMS-Provider] getCurrentLocation返回null")
                     }
                     if (continuation.isActive) {
                         continuation.resume(location)
                     }
                 }.addOnFailureListener { exception ->
                     val costTime = System.currentTimeMillis() - startTime
-                    Log.e(TAG, "[GMS-Provider] getCurrentLocation onFailure, 耗时: ${costTime}ms", exception)
+                    LocationLogger.e( "[GMS-Provider] getCurrentLocation onFailure, 耗时: ${costTime}ms", exception)
                     if (continuation.isActive) {
                         continuation.resumeWithException(exception)
                     }
                 }
                 
                 continuation.invokeOnCancellation {
-                    Log.d(TAG, "[GMS-Provider] getCurrentLocation 被取消")
+                    LocationLogger.d( "[GMS-Provider] getCurrentLocation 被取消")
                     cancellationTokenSource?.cancel()
                 }
             }
             
             if (location != null) {
-                Log.d(TAG, "[GMS-Provider] ✅ 定位成功")
+                LocationLogger.d( "[GMS-Provider] ✅ 定位成功")
                 Result.success(LocationData.fromLocation(location, LocationProvider.GMS))
             } else {
-                Log.e(TAG, "[GMS-Provider] ❌ 无法获取位置 (返回null)")
+                LocationLogger.e( "[GMS-Provider] ❌ 无法获取位置 (返回null)")
                 Result.failure(Exception(LocationError.LocationFailed().message))
             }
         } catch (e: Exception) {
-            Log.e(TAG, "[GMS-Provider] ❌ getLocation异常", e)
+            LocationLogger.e( "[GMS-Provider] ❌ getLocation异常", e)
             Result.failure(e)
         }
     }
@@ -248,14 +244,14 @@ class GmsLocationProvider(private val context: Context) {
                         }
                     }
                     .addOnFailureListener { exception ->
-                        Log.e(TAG, "Failed to get last known location", exception)
+                        LocationLogger.e( "Failed to get last known location", exception)
                         if (continuation.isActive) {
                             continuation.resume(null)
                         }
                     }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting last known location", e)
+            LocationLogger.e( "Error getting last known location", e)
             null
         }
     }
