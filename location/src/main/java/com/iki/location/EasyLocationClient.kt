@@ -58,6 +58,7 @@ class EasyLocationClient(activity: Activity) {
         const val DEFAULT_TIMEOUT_MILLIS = 30000L
     }
     
+    private val context = activity.applicationContext
     private val activityRef = WeakReference(activity)
     private val locationManager = SimpleLocationManager.getInstance(activity)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -352,13 +353,13 @@ class EasyLocationClient(activity: Activity) {
      */
     private fun showLocationSettingDialog(activity: Activity) {
         android.app.AlertDialog.Builder(activity)
-            .setTitle("提示")
-            .setMessage("定位服务未开启，无法获取位置，请前往设置打开。")
-            .setPositiveButton("去设置") { _, _ ->
+            .setTitle(context.getString(R.string.location_dialog_title_hint))
+            .setMessage(context.getString(R.string.location_dialog_msg_location_disabled))
+            .setPositiveButton(context.getString(R.string.location_btn_go_settings)) { _, _ ->
                 openLocationSettings()
                 finishWithError(EasyLocationError.LocationDisabled)
             }
-            .setNegativeButton("取消") { _, _ ->
+            .setNegativeButton(context.getString(R.string.location_btn_cancel)) { _, _ ->
                 finishWithError(EasyLocationError.LocationDisabled)
             }
             .setCancelable(false)
@@ -371,14 +372,14 @@ class EasyLocationClient(activity: Activity) {
     private fun showPermissionSettingDialog(activity: Activity) {
         LocationLogger.d("[EasyLocation] 显示权限永久拒绝引导对话框")
         android.app.AlertDialog.Builder(activity)
-            .setTitle("提示")
-            .setMessage("定位权限被永久拒绝，无法获取位置，请前往设置开启权限。")
-            .setPositiveButton("去设置") { _, _ ->
+            .setTitle(context.getString(R.string.location_dialog_title_hint))
+            .setMessage(context.getString(R.string.location_dialog_msg_permission_denied))
+            .setPositiveButton(context.getString(R.string.location_btn_go_settings)) { _, _ ->
                 LocationLogger.d("[EasyLocation] 用户点击去设置")
                 openAppSettings()
                 finishWithError(EasyLocationError.PermissionPermanentlyDenied)
             }
-            .setNegativeButton("取消") { _, _ ->
+            .setNegativeButton(context.getString(R.string.location_btn_cancel)) { _, _ ->
                 LocationLogger.d("[EasyLocation] 用户点击取消")
                 finishWithError(EasyLocationError.PermissionPermanentlyDenied)
             }
@@ -395,14 +396,14 @@ class EasyLocationClient(activity: Activity) {
     private fun showFineLocationRequiredDialog(activity: Activity) {
         LocationLogger.d("[EasyLocation] 显示精确定位引导对话框")
         android.app.AlertDialog.Builder(activity)
-            .setTitle("需要精确定位权限")
-            .setMessage("系统已记住您之前的选择，无法再次弹出权限选择框。\n\n请前往设置，将定位权限改为「精确」位置。")
-            .setPositiveButton("去设置") { _, _ ->
+            .setTitle(context.getString(R.string.location_dialog_title_fine_location_required))
+            .setMessage(context.getString(R.string.location_dialog_msg_fine_location_required))
+            .setPositiveButton(context.getString(R.string.location_btn_go_settings)) { _, _ ->
                 LocationLogger.d("[EasyLocation] 用户点击去设置")
                 openAppSettings()
                 finishWithError(EasyLocationError.FineLocationRequired)
             }
-            .setNegativeButton("取消") { _, _ ->
+            .setNegativeButton(context.getString(R.string.location_btn_cancel)) { _, _ ->
                 LocationLogger.d("[EasyLocation] 用户点击取消")
                 finishWithError(EasyLocationError.FineLocationRequired)
             }
@@ -515,40 +516,48 @@ interface EasyLocationCallback {
 
 /**
  * 一键定位错误类型
+ * 
+ * @param message 默认错误消息（用于日志等场景）
+ * @param code 错误码
+ * @param messageResId 本地化消息资源ID（用于多语言场景）
  */
-sealed class EasyLocationError(val message: String, val code: Int) {
+sealed class EasyLocationError(
+    val message: String, 
+    val code: Int,
+    val messageResId: Int
+) {
     
     /** 权限被拒绝（用户本次拒绝，可以再次申请） */
     object PermissionDenied : 
-        EasyLocationError("定位权限被拒绝", CODE_PERMISSION_DENIED)
+        EasyLocationError("Permission denied", CODE_PERMISSION_DENIED, R.string.location_error_permission_denied)
     
     /** 权限被永久拒绝（用户选择了"不再询问"，需要去设置中开启） */
     object PermissionPermanentlyDenied : 
-        EasyLocationError("定位权限被永久拒绝，请到设置中开启", CODE_PERMISSION_PERMANENTLY_DENIED)
+        EasyLocationError("Permission permanently denied", CODE_PERMISSION_PERMANENTLY_DENIED, R.string.location_error_permission_permanently_denied)
     
     /** 要求精确定位但用户只授予了模糊定位 */
     object FineLocationRequired : 
-        EasyLocationError("需要精确定位权限，但用户只授予了模糊定位", CODE_FINE_LOCATION_REQUIRED)
+        EasyLocationError("Fine location required", CODE_FINE_LOCATION_REQUIRED, R.string.location_error_fine_location_required)
     
     /** GMS 精确定位开关被拒绝 */
     object GmsAccuracyDenied : 
-        EasyLocationError("用户拒绝开启精确定位", CODE_GMS_ACCURACY_DENIED)
+        EasyLocationError("GMS accuracy denied", CODE_GMS_ACCURACY_DENIED, R.string.location_error_gms_accuracy_denied)
     
     /** 定位服务未开启 */
     object LocationDisabled : 
-        EasyLocationError("定位服务未开启，请到设置中开启", CODE_LOCATION_DISABLED)
+        EasyLocationError("Location disabled", CODE_LOCATION_DISABLED, R.string.location_error_location_disabled)
     
     /** 定位失败 */
     class LocationFailed(val originalError: LocationError) : 
-        EasyLocationError("定位失败: ${originalError.message}", CODE_LOCATION_FAILED)
+        EasyLocationError("Location failed: ${originalError.message}", CODE_LOCATION_FAILED, R.string.location_error_location_failed)
     
     /** Activity 已销毁 */
     object ActivityDestroyed : 
-        EasyLocationError("页面已关闭", CODE_ACTIVITY_DESTROYED)
+        EasyLocationError("Activity destroyed", CODE_ACTIVITY_DESTROYED, R.string.location_error_activity_destroyed)
     
     /** 已有请求在处理中 */
     object AlreadyProcessing : 
-        EasyLocationError("已有定位请求在处理中", CODE_ALREADY_PROCESSING)
+        EasyLocationError("Already processing", CODE_ALREADY_PROCESSING, R.string.location_error_already_processing)
     
     companion object {
         const val CODE_PERMISSION_DENIED = 2001
@@ -559,6 +568,16 @@ sealed class EasyLocationError(val message: String, val code: Int) {
         const val CODE_LOCATION_FAILED = 2006
         const val CODE_ACTIVITY_DESTROYED = 2007
         const val CODE_ALREADY_PROCESSING = 2008
+    }
+    
+    /**
+     * 获取本地化错误消息
+     * 
+     * @param context Context 用于获取资源
+     * @return 本地化的错误消息
+     */
+    fun getLocalizedMessage(context: android.content.Context): String {
+        return context.getString(messageResId)
     }
     
     /**

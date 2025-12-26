@@ -1,6 +1,7 @@
 package com.iki.location.model
 
 import android.location.Location
+import com.iki.location.R
 
 /**
  * 定位结果数据类
@@ -66,35 +67,43 @@ enum class LocationProvider {
 
 /**
  * 定位错误类型
+ * 
+ * @param message 默认错误消息（用于日志等场景）
+ * @param code 错误码
+ * @param messageResId 本地化消息资源ID（用于多语言场景）
  */
-sealed class LocationError(val message: String, val code: Int) {
+sealed class LocationError(
+    val message: String, 
+    val code: Int,
+    val messageResId: Int
+) {
     /** 权限未授予 */
     class PermissionDenied(message: String = "Location permission denied") : 
-        LocationError(message, ERROR_PERMISSION_DENIED)
+        LocationError(message, ERROR_PERMISSION_DENIED, R.string.location_error_base_permission_denied)
     
     /** 定位服务未开启 */
     class LocationDisabled(message: String = "Location service is disabled") : 
-        LocationError(message, ERROR_LOCATION_DISABLED)
+        LocationError(message, ERROR_LOCATION_DISABLED, R.string.location_error_base_location_disabled)
     
     /** GMS 不可用 */
     class GmsUnavailable(message: String = "Google Play Services is unavailable") : 
-        LocationError(message, ERROR_GMS_UNAVAILABLE)
+        LocationError(message, ERROR_GMS_UNAVAILABLE, R.string.location_error_base_gms_unavailable)
     
     /** GMS 精确定位开关未开启 */
     class GmsAccuracyDisabled(message: String = "Google Location Accuracy is disabled") : 
-        LocationError(message, ERROR_GMS_ACCURACY_DISABLED)
+        LocationError(message, ERROR_GMS_ACCURACY_DISABLED, R.string.location_error_base_gms_accuracy_disabled)
     
     /** 定位超时 */
     class Timeout(message: String = "Location request timeout") : 
-        LocationError(message, ERROR_TIMEOUT)
+        LocationError(message, ERROR_TIMEOUT, R.string.location_error_base_timeout)
     
     /** 定位失败 */
     class LocationFailed(message: String = "Failed to get location") : 
-        LocationError(message, ERROR_LOCATION_FAILED)
+        LocationError(message, ERROR_LOCATION_FAILED, R.string.location_error_base_location_failed)
     
     /** 未知错误 */
     class Unknown(message: String = "Unknown error", val throwable: Throwable? = null) : 
-        LocationError(message, ERROR_UNKNOWN)
+        LocationError(message, ERROR_UNKNOWN, R.string.location_error_base_unknown)
     
     companion object {
         const val ERROR_PERMISSION_DENIED = 1001
@@ -104,6 +113,16 @@ sealed class LocationError(val message: String, val code: Int) {
         const val ERROR_TIMEOUT = 1005
         const val ERROR_LOCATION_FAILED = 1006
         const val ERROR_UNKNOWN = 1099
+    }
+    
+    /**
+     * 获取本地化错误消息
+     * 
+     * @param context Context 用于获取资源
+     * @return 本地化的错误消息
+     */
+    fun getLocalizedMessage(context: android.content.Context): String {
+        return context.getString(messageResId)
     }
 }
 
