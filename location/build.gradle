@@ -1,6 +1,14 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    id 'maven-publish'
+}
+
+// Maven 发布配置
+ext {
+    publishGroupId = 'com.iki'
+    publishArtifactId = 'simplelocation'
+    publishVersion = '1.0.0'
 }
 
 android {
@@ -39,4 +47,39 @@ dependencies {
     implementation libs.kotlinx.coroutines.android
     
     testImplementation libs.junit
+}
+
+// ==================== Maven 发布配置 ====================
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+                
+                groupId = publishGroupId
+                artifactId = publishArtifactId
+                version = publishVersion
+                
+                pom {
+                    name = 'SimpleLocation'
+                    description = 'A simple and easy-to-use location library for Android'
+                    
+                    licenses {
+                        license {
+                            name = 'The Apache License, Version 2.0'
+                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        }
+                    }
+                }
+            }
+        }
+        
+        repositories {
+            // 发布到项目内的本地 Maven 仓库
+            maven {
+                name = 'localRepo'
+                url = uri("${rootProject.projectDir}/repo")
+            }
+        }
+    }
 }
