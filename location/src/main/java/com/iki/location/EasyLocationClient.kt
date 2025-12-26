@@ -67,6 +67,12 @@ class EasyLocationClient(activity: Activity) {
     private var timeoutMillis: Long = DEFAULT_TIMEOUT_MILLIS
     private var isProcessing = false
     
+    // 用于检测系统是否弹出了权限对话框
+    private var permissionRequestStartTime: Long = 0
+    // 判断系统是否弹出对话框的阈值（毫秒）
+    // 如果权限请求在这个时间内返回，说明系统没有弹出对话框
+    private val DIALOG_THRESHOLD_MILLIS = 500L
+    
     /**
      * 一键获取定位（使用默认配置）
      * 
@@ -183,7 +189,7 @@ class EasyLocationClient(activity: Activity) {
      * 
      * 处理以下情况：
      * 1. 用户之前没有任何权限 -> 正常弹窗
-     * 2. 用户之前只授予了模糊权限 -> 尝试弹窗，如果不弹窗则引导去设置
+     * 2. 用户之前只授予了模糊权限 -> 尝试弹窗，通过响应时间检测系统是否弹出了对话框
      */
     private fun requestFineLocationPermission(activity: Activity) {
         // 检查是否已有模糊权限（说明用户之前选择了模糊定位）
@@ -191,16 +197,22 @@ class EasyLocationClient(activity: Activity) {
                             !locationManager.hasFineLocationPermission()
         
         if (hasCoarseOnly) {
-            LocationLogger.d( "[EasyLocation] 用户已有模糊权限，尝试申请精确权限...")
+            LocationLogger.d("[EasyLocation] 用户已有模糊权限，尝试申请精确权限...")
+        } else {
+            LocationLogger.d("[EasyLocation] 没有任何定位权限，申请权限...")
         }
+        
+        // 记录请求开始时间，用于检测系统是否弹出了对话框
+        permissionRequestStartTime = System.currentTimeMillis()
         
         locationManager.requestLocationPermission(activity, object : PermissionCallback {
             override fun onPermissionGranted(permissions: List<String>) {
-                LocationLogger.d( "[EasyLocation] ✅ 权限已授予: $permissions")
+                val elapsed = System.currentTimeMillis() - permissionRequestStartTime
+                LocationLogger.d("[EasyLocation] ✅ 权限已授予: $permissions, 耗时: ${elapsed}ms")
                 
                 // 再次检查是否获得了精确权限
                 if (locationManager.hasFineLocationPermission()) {
-                    LocationLogger.d( "[EasyLocation] ✅ 已获得精确定位权限")
+                    LocationLogger.d("[EasyLocation] ✅ 已获得精确定位权限")
                     val act = activityRef.get()
                     if (act != null && !act.isFinishing && !act.isDestroyed) {
                         checkGmsAccuracy(act)
@@ -209,20 +221,35 @@ class EasyLocationClient(activity: Activity) {
                     }
                 } else {
                     // 授予了权限但不是精确权限（用户选择了模糊）
-                    LocationLogger.e( "[EasyLocation] ❌ 用户选择了模糊定位，需要精确定位")
-                    finishWithError(EasyLocationError.FineLocationRequired)
+                    val act = activityRef.get()
+                    if (act == null || act.isFinishing || act.isDestroyed) {
+                        finishWithError(EasyLocationError.FineLocationRequired)
+                        return
+                    }
+                    
+                    // 检测系统是否弹出了对话框
+                    val dialogShown = elapsed >= DIALOG_THRESHOLD_MILLIS
+                    LocationLogger.d("[EasyLocation] 权限请求耗时: ${elapsed}ms, 阈值: ${DIALOG_THRESHOLD_MILLIS}ms, 系统弹出对话框: $dialogShown")
+                    
+                    if (dialogShown) {
+                        // 系统弹出了对话框，用户主动选择了模糊定位
+                        // 直接返回错误回调，让业务层决定如何处理
+                        LocationLogger.w("[EasyLocation] ⚠️ 用户主动选择了模糊定位，返回错误回调")
+                        finishWithError(EasyLocationError.FineLocationRequired)
+                    } else {
+                        // 系统没有弹出对话框（响应太快），说明系统记住了之前的选择
+                        // SDK 主动弹出引导对话框，引导用户去设置
+                        LocationLogger.w("[EasyLocation] ⚠️ 系统未弹出对话框（耗时 ${elapsed}ms < ${DIALOG_THRESHOLD_MILLIS}ms），弹出引导对话框")
+                        showFineLocationRequiredDialog(act)
+                    }
                 }
             }
             
             override fun onPermissionDenied(deniedPermissions: List<String>, permanentlyDenied: Boolean) {
-                LocationLogger.e( "[EasyLocation] ❌ 权限被拒绝: $deniedPermissions, 永久拒绝: $permanentlyDenied")
+                val elapsed = System.currentTimeMillis() - permissionRequestStartTime
+                LocationLogger.e("[EasyLocation] ❌ 权限被拒绝: $deniedPermissions, 永久拒绝: $permanentlyDenied, 耗时: ${elapsed}ms")
                 
-                // 如果之前已有模糊权限，但系统没有弹窗让用户选择精确权限
-                // 这种情况下需要引导用户去设置
-                if (hasCoarseOnly && locationManager.hasLocationPermission()) {
-                    LocationLogger.e( "[EasyLocation] ❌ 用户已有模糊权限，需要去设置中修改为精确权限")
-                    finishWithError(EasyLocationError.FineLocationRequired)
-                } else if (permanentlyDenied) {
+                if (permanentlyDenied) {
                     val act = activityRef.get()
                     if (act != null && !act.isFinishing && !act.isDestroyed) {
                         showPermissionSettingDialog(act)
@@ -342,15 +369,42 @@ class EasyLocationClient(activity: Activity) {
      * 显示权限未授予提示框
      */
     private fun showPermissionSettingDialog(activity: Activity) {
+        LocationLogger.d("[EasyLocation] 显示权限永久拒绝引导对话框")
         android.app.AlertDialog.Builder(activity)
             .setTitle("提示")
             .setMessage("定位权限被永久拒绝，无法获取位置，请前往设置开启权限。")
             .setPositiveButton("去设置") { _, _ ->
+                LocationLogger.d("[EasyLocation] 用户点击去设置")
                 openAppSettings()
                 finishWithError(EasyLocationError.PermissionPermanentlyDenied)
             }
             .setNegativeButton("取消") { _, _ ->
+                LocationLogger.d("[EasyLocation] 用户点击取消")
                 finishWithError(EasyLocationError.PermissionPermanentlyDenied)
+            }
+            .setCancelable(false)
+            .show()
+    }
+    
+    /**
+     * 显示需要精确定位权限提示框
+     * 
+     * 仅当系统没有弹出权限选择对话框时调用
+     * （系统记住了用户之前的模糊定位选择，无法再次弹出选择框）
+     */
+    private fun showFineLocationRequiredDialog(activity: Activity) {
+        LocationLogger.d("[EasyLocation] 显示精确定位引导对话框")
+        android.app.AlertDialog.Builder(activity)
+            .setTitle("需要精确定位权限")
+            .setMessage("系统已记住您之前的选择，无法再次弹出权限选择框。\n\n请前往设置，将定位权限改为「精确」位置。")
+            .setPositiveButton("去设置") { _, _ ->
+                LocationLogger.d("[EasyLocation] 用户点击去设置")
+                openAppSettings()
+                finishWithError(EasyLocationError.FineLocationRequired)
+            }
+            .setNegativeButton("取消") { _, _ ->
+                LocationLogger.d("[EasyLocation] 用户点击取消")
+                finishWithError(EasyLocationError.FineLocationRequired)
             }
             .setCancelable(false)
             .show()
