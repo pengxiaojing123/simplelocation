@@ -3,11 +3,13 @@ package com.iki.location
 import android.app.Activity
 import android.content.Intent
 import com.iki.location.callback.PermissionCallback
-import com.iki.location.util.LocationLogger
 import com.iki.location.callback.SingleLocationCallback
+import com.iki.location.model.CachedLocation
+import com.iki.location.model.LocationCacheManager
 import com.iki.location.model.LocationData
 import com.iki.location.model.LocationError
 import com.iki.location.model.LocationRequest
+import com.iki.location.util.LocationLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -61,6 +63,7 @@ class EasyLocationClient(activity: Activity) {
     private val context = activity.applicationContext
     private val activityRef = WeakReference(activity)
     private val locationManager = SimpleLocationManager.getInstance(activity)
+    private val locationCacheManager = LocationCacheManager.getInstance(activity)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     
     private var currentCallback: EasyLocationCallback? = null
@@ -415,7 +418,12 @@ class EasyLocationClient(activity: Activity) {
      * 完成 - 成功
      */
     private fun finishWithSuccess(location: LocationData) {
-        LocationLogger.d( "[EasyLocation] ========== 一键定位流程完成 (成功) ==========")
+        LocationLogger.d("[EasyLocation] ========== 一键定位流程完成 (成功) ==========")
+        
+        // 保存定位数据到缓存
+        locationCacheManager.saveLocation(location)
+        LocationLogger.d("[EasyLocation] 定位数据已缓存: provider=${location.provider}, accuracy=${location.accuracy}m")
+        
         isProcessing = false
         currentCallback?.onSuccess(location)
         currentCallback = null
@@ -496,6 +504,31 @@ class EasyLocationClient(activity: Activity) {
      */
     fun openLocationSettings() {
         locationManager.openLocationSettings()
+    }
+    
+    // ==================== 缓存相关 ====================
+    
+    /**
+     * 获取上次缓存的定位数据
+     * 
+     * @return 缓存的定位数据，如果没有缓存返回 null
+     */
+    fun getLastLocation(): CachedLocation? {
+        return locationCacheManager.getLastLocation()
+    }
+    
+    /**
+     * 检查是否有缓存的定位数据
+     */
+    fun hasLocationCache(): Boolean {
+        return locationCacheManager.hasCache()
+    }
+    
+    /**
+     * 清除定位缓存
+     */
+    fun clearLocationCache() {
+        locationCacheManager.clearCache()
     }
 }
 

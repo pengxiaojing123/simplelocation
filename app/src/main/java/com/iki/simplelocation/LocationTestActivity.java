@@ -17,6 +17,7 @@ import com.iki.location.EasyLocationError;
 import com.iki.location.SimpleLocationManager;
 import com.iki.location.callback.PermissionCallback;
 import com.iki.location.callback.SingleLocationCallback;
+import com.iki.location.model.CachedLocation;
 import com.iki.location.model.LocationData;
 import com.iki.location.model.LocationError;
 import com.iki.location.model.LocationRequest;
@@ -40,6 +41,7 @@ public class LocationTestActivity extends AppCompatActivity {
     private ScrollView scrollView;
     private Button btnEasyLocation;
     private Button btnEasyLocationFine;
+    private Button btnGetCachedLocation;
 
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault());
 
@@ -61,6 +63,7 @@ public class LocationTestActivity extends AppCompatActivity {
         scrollView = findViewById(R.id.scrollView);
         btnEasyLocation = findViewById(R.id.btnEasyLocation);
         btnEasyLocationFine = findViewById(R.id.btnEasyLocationFine);
+        btnGetCachedLocation = findViewById(R.id.btnGetCachedLocation);
     }
 
     private void setupListeners() {
@@ -140,6 +143,33 @@ public class LocationTestActivity extends AppCompatActivity {
             });
         });
 
+        // 获取缓存的定位数据
+        btnGetCachedLocation.setOnClickListener(v -> {
+            addLog("📦 获取缓存的定位数据...");
+            
+            CachedLocation cachedLocation = easyLocationClient.getLastLocation();
+            
+            if (cachedLocation != null) {
+                addLog("✅ 找到缓存的定位数据:");
+                addLog("   经纬度: (" + cachedLocation.getLatitude() + ", " + cachedLocation.getLongitude() + ")");
+                addLog("   精度: " + cachedLocation.getAccuracy() + "m");
+                addLog("   定位类型 (gps_type): " + cachedLocation.getGpsType());
+                addLog("   定位时间戳 (gps_position_time): " + cachedLocation.getGpsPositionTime());
+                addLog("   保存时老化时间 (gps_mills_old_when_saved): " + cachedLocation.getGpsMillsOldWhenSaved() + "ms");
+                addLog("   当前老化时间: " + cachedLocation.getCurrentAgeMillis() + "ms");
+                
+                // 格式化定位时间
+                String positionTime = timeFormat.format(new Date(cachedLocation.getGpsPositionTime()));
+                addLog("   定位时间 (格式化): " + positionTime);
+                
+                // 检查是否过期（5分钟）
+                boolean isExpired = cachedLocation.isExpired(5 * 60 * 1000);
+                addLog("   是否过期 (>5分钟): " + (isExpired ? "⚠️ 是" : "✅ 否"));
+            } else {
+                addLogError("❌ 没有缓存的定位数据");
+                addLogError("   💡 请先进行一次定位");
+            }
+        });
 
     }
 

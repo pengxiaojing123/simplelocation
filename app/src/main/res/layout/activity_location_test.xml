@@ -40,6 +40,15 @@
             android:textSize="12sp"
             android:layout_marginStart="4dp" />
     </LinearLayout>
+    
+    <!-- 缓存相关按钮 -->
+    <Button
+        android:id="@+id/btnGetCachedLocation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="📦 获取缓存的定位数据"
+        android:textSize="14sp" />
 
 
     <!-- 日志区域 -->
