@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ==================== Karaniwang Teksto ng Button ==================== -->
+    <string name="location_btn_go_settings">Pumunta sa Settings</string>
+    <string name="location_btn_cancel">Kanselahin</string>
+    
+    <!-- ==================== Teksto ng Dialog ==================== -->
+    <!-- Dialog na Naka-disable ang Location Service -->
+    <string name="location_dialog_title_hint">Abiso</string>
+    <string name="location_dialog_msg_location_disabled">Naka-disable ang serbisyo ng lokasyon. Mangyaring paganahin ito sa Settings.</string>
+    
+    <!-- Dialog na Permanenteng Tinanggihan ang Pahintulot -->
+    <string name="location_dialog_msg_permission_denied">Permanenteng tinanggihan ang pahintulot sa lokasyon. Mangyaring paganahin ito sa Settings.</string>
+    
+    <!-- Dialog na Kinakailangan ang Tumpak na Lokasyon -->
+    <string name="location_dialog_title_fine_location_required">Kinakailangan ang Tumpak na Lokasyon</string>
+    <string name="location_dialog_msg_fine_location_required">Naaalala ng sistema ang iyong nakaraang pagpili at hindi na maipakita muli ang dialog ng pahintulot.\n\nMangyaring pumunta sa Settings at palitan ang pahintulot sa lokasyon sa \"Tumpak\".</string>
+    
+    <!-- ==================== Mga Mensahe ng Error ng EasyLocationError ==================== -->
+    <string name="location_error_permission_denied">Tinanggihan ang pahintulot sa lokasyon</string>
+    <string name="location_error_permission_permanently_denied">Permanenteng tinanggihan ang pahintulot sa lokasyon. Mangyaring paganahin ito sa Settings.</string>
+    <string name="location_error_fine_location_required">Kinakailangan ang pahintulot sa tumpak na lokasyon, ngunit tinanggi lamang ang tinatayang lokasyon</string>
+    <string name="location_error_gms_accuracy_denied">Tumanggi ang user na paganahin ang tumpak na lokasyon</string>
+    <string name="location_error_location_disabled">Naka-disable ang serbisyo ng lokasyon. Mangyaring paganahin ito sa Settings.</string>
+    <string name="location_error_location_failed">Nabigong makuha ang lokasyon</string>
+    <string name="location_error_activity_destroyed">Naisara na ang pahina</string>
+    <string name="location_error_already_processing">May kahilingan sa lokasyon na kasalukuyang isinasagawa</string>
+    
+    <!-- ==================== Mga Mensahe ng Error ng LocationError ==================== -->
+    <string name="location_error_base_permission_denied">Hindi ibinigay ang pahintulot sa lokasyon</string>
+    <string name="location_error_base_location_disabled">Naka-disable ang serbisyo ng lokasyon</string>
+    <string name="location_error_base_gms_unavailable">Hindi available ang Google Play Services</string>
+    <string name="location_error_base_gms_accuracy_disabled">Naka-disable ang Google Location Accuracy</string>
+    <string name="location_error_base_timeout">Nag-timeout ang kahilingan sa lokasyon</string>
+    <string name="location_error_base_location_failed">Nabigong makuha ang lokasyon</string>
+    <string name="location_error_base_unknown">Hindi kilalang error</string>
+</resources>
+

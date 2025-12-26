@@ -1,38 +1,38 @@
 <resources>
     <string name="app_name">location</string>
     
-    <!-- ==================== 通用按钮文案 ==================== -->
-    <string name="location_btn_go_settings">去设置</string>
-    <string name="location_btn_cancel">取消</string>
+    <!-- ==================== Common Button Text ==================== -->
+    <string name="location_btn_go_settings">Go to Settings</string>
+    <string name="location_btn_cancel">Cancel</string>
     
-    <!-- ==================== 对话框文案 ==================== -->
-    <!-- 定位服务未开启对话框 -->
-    <string name="location_dialog_title_hint">提示</string>
-    <string name="location_dialog_msg_location_disabled">定位服务未开启，无法获取位置，请前往设置打开。</string>
+    <!-- ==================== Dialog Text ==================== -->
+    <!-- Location Service Disabled Dialog -->
+    <string name="location_dialog_title_hint">Notice</string>
+    <string name="location_dialog_msg_location_disabled">Location service is disabled. Please enable it in Settings.</string>
     
-    <!-- 权限永久拒绝对话框 -->
-    <string name="location_dialog_msg_permission_denied">定位权限被永久拒绝，无法获取位置，请前往设置开启权限。</string>
+    <!-- Permission Permanently Denied Dialog -->
+    <string name="location_dialog_msg_permission_denied">Location permission is permanently denied. Please enable it in Settings.</string>
     
-    <!-- 需要精确定位对话框 -->
-    <string name="location_dialog_title_fine_location_required">需要精确定位权限</string>
-    <string name="location_dialog_msg_fine_location_required">系统已记住您之前的选择，无法再次弹出权限选择框。\n\n请前往设置，将定位权限改为「精确」位置。</string>
+    <!-- Fine Location Required Dialog -->
+    <string name="location_dialog_title_fine_location_required">Precise Location Required</string>
+    <string name="location_dialog_msg_fine_location_required">The system has remembered your previous choice and cannot show the permission dialog again.\n\nPlease go to Settings and change location permission to \"Precise\".</string>
     
-    <!-- ==================== EasyLocationError 错误消息 ==================== -->
-    <string name="location_error_permission_denied">定位权限被拒绝</string>
-    <string name="location_error_permission_permanently_denied">定位权限被永久拒绝，请到设置中开启</string>
-    <string name="location_error_fine_location_required">需要精确定位权限，但用户只授予了模糊定位</string>
-    <string name="location_error_gms_accuracy_denied">用户拒绝开启精确定位</string>
-    <string name="location_error_location_disabled">定位服务未开启，请到设置中开启</string>
-    <string name="location_error_location_failed">定位失败</string>
-    <string name="location_error_activity_destroyed">页面已关闭</string>
-    <string name="location_error_already_processing">已有定位请求在处理中</string>
+    <!-- ==================== EasyLocationError Messages ==================== -->
+    <string name="location_error_permission_denied">Location permission denied</string>
+    <string name="location_error_permission_permanently_denied">Location permission permanently denied. Please enable it in Settings.</string>
+    <string name="location_error_fine_location_required">Precise location permission required, but only approximate location was granted</string>
+    <string name="location_error_gms_accuracy_denied">User declined to enable precise location</string>
+    <string name="location_error_location_disabled">Location service is disabled. Please enable it in Settings.</string>
+    <string name="location_error_location_failed">Failed to get location</string>
+    <string name="location_error_activity_destroyed">Page has been closed</string>
+    <string name="location_error_already_processing">A location request is already in progress</string>
     
-    <!-- ==================== LocationError 错误消息 ==================== -->
-    <string name="location_error_base_permission_denied">定位权限未授予</string>
-    <string name="location_error_base_location_disabled">定位服务未开启</string>
-    <string name="location_error_base_gms_unavailable">Google Play 服务不可用</string>
-    <string name="location_error_base_gms_accuracy_disabled">Google 精确定位开关未开启</string>
-    <string name="location_error_base_timeout">定位超时</string>
-    <string name="location_error_base_location_failed">获取定位失败</string>
-    <string name="location_error_base_unknown">未知错误</string>
+    <!-- ==================== LocationError Messages ==================== -->
+    <string name="location_error_base_permission_denied">Location permission not granted</string>
+    <string name="location_error_base_location_disabled">Location service is disabled</string>
+    <string name="location_error_base_gms_unavailable">Google Play Services is unavailable</string>
+    <string name="location_error_base_gms_accuracy_disabled">Google Location Accuracy is disabled</string>
+    <string name="location_error_base_timeout">Location request timed out</string>
+    <string name="location_error_base_location_failed">Failed to get location</string>
+    <string name="location_error_base_unknown">Unknown error</string>
 </resources>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ==================== Teks Tombol Umum ==================== -->
+    <string name="location_btn_go_settings">Buka Pengaturan</string>
+    <string name="location_btn_cancel">Batal</string>
+    
+    <!-- ==================== Teks Dialog ==================== -->
+    <!-- Dialog Layanan Lokasi Dinonaktifkan -->
+    <string name="location_dialog_title_hint">Pemberitahuan</string>
+    <string name="location_dialog_msg_location_disabled">Layanan lokasi dinonaktifkan. Silakan aktifkan di Pengaturan.</string>
+    
+    <!-- Dialog Izin Ditolak Secara Permanen -->
+    <string name="location_dialog_msg_permission_denied">Izin lokasi ditolak secara permanen. Silakan aktifkan di Pengaturan.</string>
+    
+    <!-- Dialog Lokasi Presisi Diperlukan -->
+    <string name="location_dialog_title_fine_location_required">Lokasi Presisi Diperlukan</string>
+    <string name="location_dialog_msg_fine_location_required">Sistem telah mengingat pilihan Anda sebelumnya dan tidak dapat menampilkan dialog izin lagi.\n\nSilakan buka Pengaturan dan ubah izin lokasi menjadi \"Presisi\".</string>
+    
+    <!-- ==================== Pesan Error EasyLocationError ==================== -->
+    <string name="location_error_permission_denied">Izin lokasi ditolak</string>
+    <string name="location_error_permission_permanently_denied">Izin lokasi ditolak secara permanen. Silakan aktifkan di Pengaturan.</string>
+    <string name="location_error_fine_location_required">Izin lokasi presisi diperlukan, tetapi hanya lokasi perkiraan yang diberikan</string>
+    <string name="location_error_gms_accuracy_denied">Pengguna menolak untuk mengaktifkan lokasi presisi</string>
+    <string name="location_error_location_disabled">Layanan lokasi dinonaktifkan. Silakan aktifkan di Pengaturan.</string>
+    <string name="location_error_location_failed">Gagal mendapatkan lokasi</string>
+    <string name="location_error_activity_destroyed">Halaman telah ditutup</string>
+    <string name="location_error_already_processing">Permintaan lokasi sedang diproses</string>
+    
+    <!-- ==================== Pesan Error LocationError ==================== -->
+    <string name="location_error_base_permission_denied">Izin lokasi tidak diberikan</string>
+    <string name="location_error_base_location_disabled">Layanan lokasi dinonaktifkan</string>
+    <string name="location_error_base_gms_unavailable">Layanan Google Play tidak tersedia</string>
+    <string name="location_error_base_gms_accuracy_disabled">Akurasi Lokasi Google dinonaktifkan</string>
+    <string name="location_error_base_timeout">Permintaan lokasi habis waktu</string>
+    <string name="location_error_base_location_failed">Gagal mendapatkan lokasi</string>
+    <string name="location_error_base_unknown">Error tidak diketahui</string>
+</resources>
+
